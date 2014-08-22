@@ -5,6 +5,7 @@ from django.test.utils import override_settings
 from factory import post_generation, Sequence
 from factory.django import DjangoModelFactory
 
+from django.http import Http404
 from django.contrib.auth.models import User
 from course_groups.models import CourseUserGroup
 from courseware.tests.tests import TEST_DATA_MIXED_MODULESTORE
@@ -35,13 +36,14 @@ class CohortFactory(DjangoModelFactory):
 @override_settings(MODULESTORE=TEST_DATA_MIXED_MODULESTORE)
 class CohortViewsTestCase(ModuleStoreTestCase):
     """
-    Base class which sets up a course and a staff user.
+    Base class which sets up a course and staff/non-staff users.
     """
     def setUp(self):
         self.course = CourseFactory.create()
-        self.staff_user = UserFactory.create(is_staff=True)
+        self.staff_user = UserFactory.create(is_staff=True, username="staff")
+        self.non_staff_user = UserFactory.create(username="nonstaff")
 
-    def create_cohorts(self):
+    def _create_cohorts(self):
         """Creates cohorts for testing"""
         self.cohort1_users = [UserFactory.create() for _ in range(3)]
         self.cohort2_users = [UserFactory.create() for _ in range(2)]
@@ -83,6 +85,23 @@ class CohortViewsTestCase(ModuleStoreTestCase):
         else:
             return True
 
+    def _verify_non_staff_cannot_access(self, view, request_method, view_args):
+        """
+        Verify that a non-staff user cannot access a given view.
+
+        :view: the view to test.
+        :view_args: a list of arguments (not including the request) to pass to the view
+        """
+        if request_method == "GET":
+            request = RequestFactory().get("dummy_url")
+        elif request_method == "POST":
+            request = RequestFactory().post("dummy_url")
+        else:
+            request = RequestFactory().request()
+        request.user = self.non_staff_user
+        view_args.insert(0, request)
+        self.assertRaises(Http404, view, *view_args)
+
 
 class ListCohortsTestCase(CohortViewsTestCase):
     def check_list_cohorts(self, expected_cohorts):
@@ -91,11 +110,14 @@ class ListCohortsTestCase(CohortViewsTestCase):
 
         expected_cohorts is the list of cohorts we expect to see in the response.
         """
+        self._verify_non_staff_cannot_access(list_cohorts, "GET", [self.course.id.to_deprecated_string()])
+
         request = RequestFactory().get("dummy_url")
         request.user = self.staff_user
         response = list_cohorts(request, self.course.id.to_deprecated_string())
         self.assertEqual(response.status_code, 200)
         response_dict = json.loads(response.content)
+
         self.assertTrue(response_dict.get("success"))
         self.assertItemsEqual(
             response_dict.get("cohorts"),
@@ -119,7 +141,7 @@ class ListCohortsTestCase(CohortViewsTestCase):
         """
         Verify that cohorts are in response for a course with some cohorts.
         """
-        self.create_cohorts()
+        self._create_cohorts()
         expected_cohorts = CourseUserGroup.objects.filter(
             course_id=self.course.id,
             group_type=CourseUserGroup.COHORT
@@ -135,13 +157,15 @@ class AddCohortTestCase(CohortViewsTestCase):
 
         cohort_name is the name of the cohort which should be created.
         """
+        self._verify_non_staff_cannot_access(add_cohort, "POST", [self.course.id.to_deprecated_string()])
+
+        cohort_existed_previously = self._cohort_in_course(cohort_name, self.course)
         if cohort_name is not None:
             request = RequestFactory().post("dummy_url", {"name": cohort_name})
         else:
             request = RequestFactory().post("dummy_url", {"name": ""})
-        request.user = self.staff_user
 
-        cohort_existed_previously = self._cohort_in_course(cohort_name, self.course)
+        request.user = self.staff_user
         response = add_cohort(request, self.course.id.to_deprecated_string())
         self.assertEqual(response.status_code, 200)
         response_dict = json.loads(response.content)
@@ -180,7 +204,7 @@ class AddCohortTestCase(CohortViewsTestCase):
         """
         Verify that we cannot add a cohort with the same name as an existing cohort.
         """
-        self.create_cohorts()
+        self._create_cohorts()
         self.check_add_cohort(self.cohort1.name, "Can't create two cohorts with the same name")
 
 
@@ -203,6 +227,8 @@ class UsersInCohortTestCase(CohortViewsTestCase):
         expected_users is the list of users we expect to see in the response.
         expected_num_pages is the expected number of pages
         """
+        self._verify_non_staff_cannot_access(users_in_cohort, "GET", [self.course.id.to_deprecated_string(), cohort.id])
+
         request = RequestFactory().get("dummy_url", {"page": requested_page})
         request.user = self.staff_user
         response = users_in_cohort(request, self.course.id.to_deprecated_string(), cohort.id)
@@ -317,7 +343,7 @@ class UsersInCohortTestCase(CohortViewsTestCase):
 class AddUsersToCohortTestCase(CohortViewsTestCase):
     def setUp(self):
         super(AddUsersToCohortTestCase, self).setUp()
-        self.create_cohorts()
+        self._create_cohorts()
 
     def check_add_users_to_cohort(
             self,
@@ -342,6 +368,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
 
         expected_unknown is a list of strings corresponding to the input
         """
+        self._verify_non_staff_cannot_access(add_users_to_cohort, "POST", [self.course.id.to_deprecated_string(), self.cohort1.id])
+
         expected_added = expected_added or []
         expected_changed = expected_changed or []
         expected_present = expected_present or []
@@ -474,6 +502,8 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
         Check that remove_user_from_cohort properly removes a user from a cohort and returns appropriate success.
         If the removal should fail, verify that the returned error message matches the expected one.
         """
+        self._verify_non_staff_cannot_access(remove_user_from_cohort, "POST", [self.course.id.to_deprecated_string(), cohort.id])
+
         if username is not None:
             request = RequestFactory().post("dummy_url", {"username": username})
         else:

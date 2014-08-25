@@ -382,6 +382,10 @@ def register_user(request, extra_context=None):
         'username': '',
     }
 
+    # We save this so, later on, we can determine what course motivated a user's signup
+    # if they actually complete the registration process
+    request.session['registration_course_id'] = context['course_id']
+
     if extra_context is not None:
         context.update(extra_context)
 
@@ -947,19 +951,25 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
         })
 
         # Track the user's sign in
+        # If the user entered the flow via a specific course page, we track that
+        registration_course_id = request.session.get('registration_course_id')
+
         if request.session.get('never_signed_in') is True:
             # User's first time logging in with this account
             analytics.track("edx.bi.user.account.registered", {
                 "category": "conversion",
-                "label": "none"  # TODO
+                "label": registration_course_id
             })
-            request.session['never_signed_in'] = False
+            
         else:
             # Returning user's sign-in
             analytics.track("edx.bi.user.account.authenticated", {
                 "category": "conversion",
-                "label": "none"  # TODO
+                "label": registration_course_id
             })
+
+        request.session['never_signed_in'] = None
+        request.session['registration_course_id'] = None
 
     if user is not None and user.is_active:
         try:

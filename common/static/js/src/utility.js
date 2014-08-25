@@ -90,30 +90,6 @@ window.parseQueryString = function(queryString) {
     return parameters
 };
 
-// Check if the user recently enrolled in a course by looking at a referral URL
-window.checkRecentEnrollment = function(referrer) {
-    var enrolledIn = null;
-    
-    // Check if the referrer URL contains a query string
-    if (referrer.indexOf("?") > -1) {
-        referrerQueryString = referrer.split("?")[1];
-    } else {
-        referrerQueryString = "";
-    }
-
-    if (referrerQueryString != "") {
-        // Convert a non-empty query string into a key/value object
-        var referrerParameters = window.parseQueryString(referrerQueryString);
-        if ("course_id" in referrerParameters && "enrollment_action" in referrerParameters) {
-            if (referrerParameters.enrollment_action == "enroll") {
-                enrolledIn = referrerParameters.course_id;
-            }
-        }
-    }
-
-    return enrolledIn
-};
-
 window.identifyUser = function(userID, email, username) {
     analytics.identify(userID, {
         email: email,

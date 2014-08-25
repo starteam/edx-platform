@@ -341,7 +341,7 @@ class UsersInCohortTestCase(CohortViewsTestCase):
 
     def test_non_numeric_page(self):
         """
-        Verify that we get back the first page of users when the page we request isn't a valid integer.
+        Verify that we get an HTTP 400 (bad request) when the page we request isn't a valid integer.
         """
         users = [UserFactory.create() for _ in range(5)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)

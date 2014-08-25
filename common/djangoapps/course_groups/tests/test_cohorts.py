@@ -120,7 +120,8 @@ class TestCohorts(django.test.TestCase):
 
     def test_get_cohort_id(self):
         """
-        Make sure that get_cohort_id() correctly returns the cohort id.
+        Make sure that get_cohort_id() correctly returns the cohort id, or raises a ValueError when given an invalid
+        course key.
         """
         course = modulestore().get_course(self.toy_course_key)
         self.assertFalse(course.is_cohorted)
@@ -134,6 +135,8 @@ class TestCohorts(django.test.TestCase):
                                                 group_type=CourseUserGroup.COHORT)
         cohort.users.add(user)
         self.assertEqual(get_cohort_id(user, course.id), cohort.id)
+
+        self.assertRaises(ValueError, lambda: get_cohort_id(user, SlashSeparatedCourseKey("course", "does_not", "exist")))
 
     def test_get_cohort(self):
         """
@@ -305,8 +308,8 @@ class TestCohorts(django.test.TestCase):
 
     def test_get_cohorted_commentables(self):
         """
-        Make sure get_cohorted_commentables() correctly returns a list of
-        strings representing cohorted commentables.
+        Make sure get_cohorted_commentables() correctly returns a list of strings representing cohorted commentables.
+        Also verify that we can't get the cohorted commentables from a course which does not exist.
         """
         course = modulestore().get_course(self.toy_course_key)
 
@@ -335,11 +338,15 @@ class TestCohorts(django.test.TestCase):
             set([self.topic_name_to_id(course, "General"),
                  self.topic_name_to_id(course, "Feedback")])
         )
+        self.assertRaises(
+            Http404,
+            lambda: get_cohorted_commentables(SlashSeparatedCourseKey("course", "does_not", "exist"))
+        )
 
     def test_get_cohort_by_name(self):
         """
-        Make sure get_cohort_by_name() properly finds a cohort by name for a
-        given course.
+        Make sure get_cohort_by_name() properly finds a cohort by name for a given course.  Also verify that it raises
+        an error when the cohort is not found.
         """
         course = modulestore().get_course(self.toy_course_key)
 
@@ -355,6 +362,11 @@ class TestCohorts(django.test.TestCase):
         )
 
         self.assertEqual(get_cohort_by_name(course.id, "MyCohort"), cohort)
+
+        self.assertRaises(
+            CourseUserGroup.DoesNotExist,
+            lambda: get_cohort_by_name(SlashSeparatedCourseKey("course", "does_not", "exist"), cohort)
+        )
 
     def test_get_cohort_by_id(self):
         """
@@ -389,6 +401,10 @@ class TestCohorts(django.test.TestCase):
         self.assertRaises(
             ValueError,
             lambda: add_cohort(course.id, "My Cohort")
+        )
+        self.assertRaises(
+            ValueError,
+            lambda: add_cohort(SlashSeparatedCourseKey("course", "does_not", "exist"), "My Cohort")
         )
 
     def test_add_user_to_cohort(self):
@@ -452,6 +468,10 @@ class TestCohorts(django.test.TestCase):
             get_course_cohort_names(course.id),
             []
         )
+        self.assertItemsEqual(
+            get_course_cohort_names(SlashSeparatedCourseKey('course', 'does_not', 'exist')),
+            []
+        )
 
         first_cohort = CourseUserGroup.objects.create(
             name="FirstCohort",
@@ -505,8 +525,16 @@ class TestCohorts(django.test.TestCase):
                 id=empty_cohort.id
             )
         )
-
+        # Test edge cases: deleting a nonempty cohort, a cohort belonging to a fake course, and a nonexistent cohort
         self.assertRaises(
             ValueError,
             lambda: delete_empty_cohort(course.id, "NonemptyCohort")
+        )
+        self.assertRaises(
+            CourseUserGroup.DoesNotExist,
+            lambda: delete_empty_cohort(SlashSeparatedCourseKey('course', 'does_not', 'exist'), "EmptyCohort")
+        )
+        self.assertRaises(
+            CourseUserGroup.DoesNotExist,
+            lambda: delete_empty_cohort(course.id, "NonExistentCohort")
         )

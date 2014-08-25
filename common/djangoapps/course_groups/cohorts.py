@@ -215,8 +215,13 @@ def add_cohort(course_key, name):
                                       name=name).exists():
         raise ValueError("Can't create two cohorts with the same name")
 
+    try:
+        course = courses.get_course_by_id(course_key)
+    except Http404:
+        raise ValueError("Invalid course_key")
+
     return CourseUserGroup.objects.create(
-        course_id=course_key,
+        course_id=course.id,
         group_type=CourseUserGroup.COHORT,
         name=name
     )

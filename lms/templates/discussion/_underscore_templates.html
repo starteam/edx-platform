@@ -77,7 +77,7 @@
                 _.template(
                     $('#forum-actions').html(),
                     {
-                        contentId: id,
+                        contentId: cid,
                         contentType: 'post',
                         primaryActions: ['vote', 'follow'],
                         secondaryActions: ['pin', 'edit', 'delete', 'report', 'close']
@@ -185,7 +185,7 @@
                 _.template(
                     $('#forum-actions').html(),
                     {
-                        contentId: id,
+                        contentId: cid,
                         contentType: 'response',
                         primaryActions: ['vote', thread.get('thread_type') == 'question' ? 'answer' : 'endorse'],
                         secondaryActions: ['edit', 'delete', 'report']
@@ -217,7 +217,7 @@
         _.template(
             $('#forum-actions').html(),
             {
-                contentId: id,
+                contentId: cid,
                 contentType: 'comment',
                 primaryActions: [],
                 secondaryActions: ['edit', 'delete', 'report']

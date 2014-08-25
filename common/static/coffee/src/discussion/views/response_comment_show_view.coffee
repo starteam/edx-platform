@@ -4,7 +4,17 @@ if Backbone?
 
     render: ->
       @template = _.template($("#response-comment-show-template").html())
-      @$el.html(@template(_.extend({author_display: @getAuthorDisplay()}, @model.attributes)))
+      @$el.html(
+        @template(
+          _.extend(
+            {
+              cid: @model.cid,
+              author_display: @getAuthorDisplay()
+            },
+            @model.attributes
+          )
+        )
+      )
 
       @delegateEvents()
       @renderAttrs()

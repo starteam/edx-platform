@@ -8,10 +8,15 @@ if Backbone?
 
     renderTemplate: ->
       @template = _.template($("#thread-show-template").html())
-      context = @model.toJSON()
-      context.mode = @mode
-      context.flagged = @model.isFlagged()
-      context.author_display = @getAuthorDisplay()
+      context = $.extend(
+        {
+          mode: @mode,
+          flagged: @model.isFlagged(),
+          author_display: @getAuthorDisplay(),
+          cid: @model.cid
+        },
+        @model.attributes,
+      )
       @template(context)
 
     render: ->

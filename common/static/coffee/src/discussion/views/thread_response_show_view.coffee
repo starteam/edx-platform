@@ -8,6 +8,7 @@ if Backbone?
         @template = _.template($("#thread-response-show-template").html())
         context = _.extend(
             {
+                cid: @model.cid,
                 author_display: @getAuthorDisplay(),
                 endorser_display: @getEndorserDisplay()
             },

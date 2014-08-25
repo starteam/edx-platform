@@ -9,9 +9,11 @@ from django.http import Http404
 from django.contrib.auth.models import User
 from course_groups.models import CourseUserGroup
 from courseware.tests.tests import TEST_DATA_MIXED_MODULESTORE
+from student.models import CourseEnrollment
 from student.tests.factories import UserFactory
 from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
+from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
 from course_groups.views import (
     list_cohorts,
@@ -43,12 +45,22 @@ class CohortViewsTestCase(ModuleStoreTestCase):
         self.staff_user = UserFactory.create(is_staff=True, username="staff")
         self.non_staff_user = UserFactory.create(username="nonstaff")
 
+    def _enroll_users(self, users, course_key):
+        """Enroll each user in the specified course"""
+        for user in users:
+            CourseEnrollment.enroll(user, course_key)
+
     def _create_cohorts(self):
         """Creates cohorts for testing"""
         self.cohort1_users = [UserFactory.create() for _ in range(3)]
         self.cohort2_users = [UserFactory.create() for _ in range(2)]
         self.cohort3_users = [UserFactory.create() for _ in range(2)]
         self.cohortless_users = [UserFactory.create() for _ in range(3)]
+        self.unenrolled_users = [UserFactory.create() for _ in range(3)]
+        self._enroll_users(
+            self.cohort1_users + self.cohort2_users + self.cohort3_users + self.cohortless_users,
+            self.course.id
+        )
         self.cohort1 = CohortFactory.create(course_id=self.course.id, users=self.cohort1_users)
         self.cohort2 = CohortFactory.create(course_id=self.course.id, users=self.cohort2_users)
         self.cohort3 = CohortFactory.create(course_id=self.course.id, users=self.cohort3_users)
@@ -348,16 +360,24 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
     def check_add_users_to_cohort(
             self,
             users_string,
+            cohort,
+            course,
             expected_added=None,
             expected_changed=None,
             expected_present=None,
-            expected_unknown=None
+            expected_unknown=None,
+            expected_error_message=None,
+            should_raise_404=False
     ):
         """
         Check that add_users_to_cohort returns the expected result and has the
         expected side effects. The given users will be added to cohort1.
 
         users_string is the string input entered by the client
+
+        cohort is the cohort to which the users should be added
+
+        course is the course within which the users are being cohorted
 
         expected_added is a list of users
 
@@ -367,8 +387,10 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
         email/username corresponds to the input
 
         expected_unknown is a list of strings corresponding to the input
+
+        should_raise_404 is a boolean dictating whether we should verify a 404 error or not
         """
-        self._verify_non_staff_cannot_access(add_users_to_cohort, "POST", [self.course.id.to_deprecated_string(), self.cohort1.id])
+        self._verify_non_staff_cannot_access(add_users_to_cohort, "POST", [course.id.to_deprecated_string(), cohort.id])
 
         expected_added = expected_added or []
         expected_changed = expected_changed or []
@@ -376,56 +398,67 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
         expected_unknown = expected_unknown or []
         request = RequestFactory().post("dummy_url", {"users": users_string})
         request.user = self.staff_user
-        response = add_users_to_cohort(request, self.course.id.to_deprecated_string(), self.cohort1.id)
-        self.assertEqual(response.status_code, 200)
-        result = json.loads(response.content)
-        self.assertTrue(result.get("success"))
-        self.assertItemsEqual(
-            result.get("added"),
-            [
-                {"username": user.username, "name": user.profile.name, "email": user.email}
-                for user in expected_added
-            ]
-        )
-        self.assertItemsEqual(
-            result.get("changed"),
-            [
-                {
-                    "username": user.username,
-                    "name": user.profile.name,
-                    "email": user.email,
-                    "previous_cohort": previous_cohort
-                }
-                for (user, previous_cohort) in expected_changed
-            ]
-        )
-        self.assertItemsEqual(
-            result.get("present"),
-            [username_or_email for (_, username_or_email) in expected_present]
-        )
-        self.assertItemsEqual(result.get("unknown"), expected_unknown)
-        for user in expected_added + [user for (user, _) in expected_changed + expected_present]:
-            self.assertEqual(
-                CourseUserGroup.objects.get(
-                    course_id=self.course.id,
-                    group_type=CourseUserGroup.COHORT,
-                    users__id=user.id
-                ),
-                self.cohort1
+
+        if not should_raise_404:
+            response = add_users_to_cohort(request, course.id.to_deprecated_string(), cohort.id)
+            self.assertEqual(response.status_code, 200)
+            result = json.loads(response.content)
+            self.assertTrue(result.get("success"))
+            self.assertItemsEqual(
+                result.get("added"),
+                [
+                    {"username": user.username, "name": user.profile.name, "email": user.email}
+                    for user in expected_added
+                ]
+            )
+            self.assertItemsEqual(
+                result.get("changed"),
+                [
+                    {
+                        "username": user.username,
+                        "name": user.profile.name,
+                        "email": user.email,
+                        "previous_cohort": previous_cohort
+                    }
+                    for (user, previous_cohort) in expected_changed
+                ]
+            )
+            self.assertItemsEqual(
+                result.get("present"),
+                [username_or_email for (_, username_or_email) in expected_present]
+            )
+            self.assertItemsEqual(result.get("unknown"), expected_unknown)
+            for user in expected_added + [user for (user, _) in expected_changed + expected_present]:
+                self.assertEqual(
+                    CourseUserGroup.objects.get(
+                        course_id=course.id,
+                        group_type=CourseUserGroup.COHORT,
+                        users__id=user.id
+                    ),
+                    cohort
+                )
+        else:
+            self.assertRaises(
+                Http404,
+                lambda: add_users_to_cohort(request, course.id.to_deprecated_string(), cohort.id)
             )
 
     def test_empty(self):
-        self.check_add_users_to_cohort("")
+        self.check_add_users_to_cohort("", self.cohort1, self.course)
 
     def test_only_added(self):
         self.check_add_users_to_cohort(
             ",".join([user.username for user in self.cohortless_users]),
+            self.cohort1,
+            self.course,
             expected_added=self.cohortless_users
         )
 
     def test_only_changed(self):
         self.check_add_users_to_cohort(
             ",".join([user.username for user in self.cohort2_users + self.cohort3_users]),
+            self.cohort1,
+            self.course,
             expected_changed=(
                 [(user, self.cohort2.name) for user in self.cohort2_users] +
                 [(user, self.cohort3.name) for user in self.cohort3_users]
@@ -436,6 +469,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
         usernames = [user.username for user in self.cohort1_users]
         self.check_add_users_to_cohort(
             ",".join(usernames),
+            self.cohort1,
+            self.course,
             expected_present=[(user, user.username) for user in self.cohort1_users]
         )
 
@@ -443,6 +478,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
         usernames = ["unknown_user{}".format(i) for i in range(3)]
         self.check_add_users_to_cohort(
             ",".join(usernames),
+            self.cohort1,
+            self.course,
             expected_unknown=usernames
         )
 
@@ -456,6 +493,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
                     for user in self.cohortless_users + self.cohort1_users + self.cohort2_users + self.cohort3_users
                 ]
             ),
+            self.cohort1,
+            self.course,
             self.cohortless_users,
             (
                 [(user, self.cohort2.name) for user in self.cohort2_users] +
@@ -474,6 +513,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
                 self.cohortless_users[0].email,
                 unknown
             ]),
+            self.cohort1,
+            self.course,
             [self.cohortless_users[0]],
             [(self.cohort2_users[0], self.cohort2.name)],
             [(self.cohort1_users[0], self.cohort1_users[0].email)],
@@ -489,12 +530,36 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
                 self.cohort2_users[0].username,
                 self.cohortless_users[0].username
             ),
+            self.cohort1,
+            self.course,
             [self.cohortless_users[0]],
             [(self.cohort2_users[0], self.cohort2.name)],
             [(self.cohort1_users[0], self.cohort1_users[0].username)],
             [unknown]
         )
 
+    def test_bad_cohort(self):
+        """Try to add users to a cohort for a course they're not enrolled in"""
+        unenrolled_usernames = [user.username for user in self.unenrolled_users]
+        self.check_add_users_to_cohort(
+            ",".join(unenrolled_usernames),
+            self.cohort1,
+            self.course,
+            expected_unknown=unenrolled_usernames
+        )
+
+    def test_non_existent_cohort(self):
+        """Try to add users to a cohort which does not belong to the given course"""
+        users = [UserFactory.create(username="user{0}".format(i)) for i in range(3)]
+        usernames = [user.username for user in users]
+        wrong_course_key = SlashSeparatedCourseKey("some", "arbitrary", "course")
+        wrong_course_cohort = CohortFactory.create(name="wrong_cohort", course_id=wrong_course_key, users=[])
+        self.check_add_users_to_cohort(
+            ",".join(usernames),
+            wrong_course_cohort,
+            self.course,
+            should_raise_404=True
+        )
 
 class RemoveUserFromCohortTestCase(CohortViewsTestCase):
     def check_remove_user_from_cohort(self, username, cohort, expected_error_msg=None):

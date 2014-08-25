@@ -5,6 +5,7 @@ from django.http import Http404
 
 from django.test.utils import override_settings
 
+from student.models import CourseEnrollment
 from course_groups.models import CourseUserGroup
 from course_groups.cohorts import (
     is_course_cohorted,
@@ -395,7 +396,10 @@ class TestCohorts(django.test.TestCase):
         Make sure add_user_to_cohort() properly adds a user to a cohort and
         handles errors.
         """
+        course_user = User.objects.create(username="Username", email="a@b.com")
+        random_user = User.objects.create(username="RandomUsername", email="b@b.com")
         course = modulestore().get_course(self.toy_course_key)
+        CourseEnrollment.enroll(course_user, self.toy_course_key)
         first_cohort = CourseUserGroup.objects.create(
             name="FirstCohort",
             course_id=course.id,
@@ -407,30 +411,34 @@ class TestCohorts(django.test.TestCase):
             group_type=CourseUserGroup.COHORT
         )
 
-        self.assertRaises(
-            User.DoesNotExist,
-            lambda: add_user_to_cohort(first_cohort, "non_existent_username")
-        )
-
-        user = User.objects.create(username="Username", email="a@b.com")
-
+        # Success cases
         # We shouldn't get back a previous cohort, since the user wasn't in one
         self.assertEqual(
             add_user_to_cohort(first_cohort, "Username"),
-            (user, None)
+            (course_user, None)
         )
-
-        # Should get ValueError if user already in cohort
-        self.assertRaises(
-            ValueError,
-            lambda: add_user_to_cohort(first_cohort, "Username")
-        )
-
         # Should get (user, previous_cohort_name) when moved from one cohort to
         # another
         self.assertEqual(
             add_user_to_cohort(second_cohort, "Username"),
-            (user, "FirstCohort")
+            (course_user, "FirstCohort")
+        )
+
+        # Error cases
+        # Should get ValueError if user already in cohort
+        self.assertRaises(
+            ValueError,
+            lambda: add_user_to_cohort(second_cohort, "Username")
+        )
+        # UserDoesNotExist if user truly does not exist
+        self.assertRaises(
+            User.DoesNotExist,
+            lambda: add_user_to_cohort(first_cohort, "non_existent_username")
+        )
+        # UserDoesNotExist if user is not enrolled in the course for this cohort
+        self.assertRaises(
+            User.DoesNotExist,
+            lambda: add_user_to_cohort(first_cohort, "RandomUsername")
         )
 
     def test_get_course_cohort_names(self):

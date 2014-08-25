@@ -3,7 +3,7 @@ from django.views.decorators.http import require_POST
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, HttpResponseBadRequest
+from django.http import Http404, HttpResponse, HttpResponseBadRequest
 from django.utils.translation import ugettext as _
 import json
 import logging
@@ -14,7 +14,7 @@ from courseware.courses import get_course_with_access
 from edxmako.shortcuts import render_to_response
 
 from . import cohorts
-
+from .models import CourseUserGroup
 
 log = logging.getLogger(__name__)
 
@@ -161,7 +161,13 @@ def add_users_to_cohort(request, course_key_string, cohort_id):
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_key_string)
     get_course_with_access(request.user, 'staff', course_key)
 
-    cohort = cohorts.get_cohort_by_id(course_key, cohort_id)
+    try:
+        cohort = cohorts.get_cohort_by_id(course_key, cohort_id)
+    except CourseUserGroup.DoesNotExist:
+        raise Http404("Cohort (ID {cohort_id}) not found for {course_key_string}".format(
+            cohort_id=cohort_id,
+            course_key_string=course_key_string
+        ))
 
     users = request.POST.get('users', '')
     added = []

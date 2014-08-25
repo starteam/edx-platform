@@ -46,7 +46,8 @@ from student.models import (
     Registration, UserProfile, PendingNameChange,
     PendingEmailChange, CourseEnrollment, unique_id_for_user,
     CourseEnrollmentAllowed, UserStanding, LoginFailures,
-    create_comments_service_user, PasswordHistory, UserSignupSource
+    create_comments_service_user, PasswordHistory, UserSignupSource,
+    anonymous_id_for_user
 )
 from student.forms import PasswordResetFormNoActive
 
@@ -90,6 +91,7 @@ from util.password_policy_validators import (
 
 from third_party_auth import pipeline, provider
 from xmodule.error_module import ErrorDescriptor
+import analytics
 
 
 log = logging.getLogger("edx.student")
@@ -936,6 +938,29 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
     if LoginFailures.is_feature_enabled():
         LoginFailures.clear_lockout_counter(user)
 
+    if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
+        analytics.init(settings.SEGMENT_IO_LMS_KEY, flush_at=50)  # TODO set 'send' to False in unit tests
+
+        analytics.identify(anonymous_id_for_user(user, None), {
+            email: email,
+            username: username,
+        })
+
+        # Track the user's sign in
+        if request.session.get('never_signed_in') is True:
+            # User's first time logging in with this account
+            analytics.track("edx.bi.user.account.registered", {
+                "category": "conversion",
+                "label": "none"  # TODO
+            })
+            request.session['never_signed_in'] = False
+        else:
+            # Returning user's sign-in
+            analytics.track("edx.bi.user.account.authenticated", {
+                "category": "conversion",
+                "label": "none"  # TODO
+            })
+
     if user is not None and user.is_active:
         try:
             # We do not log here, because we have a handler registered
@@ -1474,6 +1499,14 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
                         path='/',
                         secure=None,
                         httponly=None)
+
+    # Analytics would like to track first-time logins vs subsequent logins,
+    # so we set a session variable indicating that the user has not yet signed in
+    # with this account. An alternative approach would be to set some flag for
+    # a user in the database itself, but it's unclear to me whether we want to add
+    # an extra column for that or not...
+    request.session['never_signed_in'] = True
+
     return response
 
 

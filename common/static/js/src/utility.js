@@ -115,7 +115,6 @@ window.checkRecentEnrollment = function(referrer) {
 };
 
 window.identifyUser = function(userID, email, username) {
-    // If the signin parameter isn't present but the query string is non-empty, map the user's activity to their assigned ID
     analytics.identify(userID, {
         email: email,
         username: username

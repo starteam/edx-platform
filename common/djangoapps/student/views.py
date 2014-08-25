@@ -943,8 +943,6 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
         LoginFailures.clear_lockout_counter(user)
 
     if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
-        analytics.init(settings.SEGMENT_IO_LMS_KEY, flush_at=50)
-
         analytics.identify(anonymous_id_for_user(user, None), {
             email: email,
             username: username,
@@ -960,7 +958,7 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
                 "category": "conversion",
                 "label": registration_course_id
             })
-            
+
         else:
             # Returning user's sign-in
             analytics.track("edx.bi.user.account.authenticated", {

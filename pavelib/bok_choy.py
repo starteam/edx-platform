@@ -40,13 +40,12 @@ def test_bokchoy(options):
     opts = {
         'test_spec': getattr(options, 'test_spec', None),
         'fasttest': getattr(options, 'fasttest', False),
+        'default_store': getattr(options, 'default_store', None),
         'verbosity': getattr(options, 'verbosity', 2),
         'extra_args': getattr(options, 'extra_args', ''),
         'test_dir': 'tests',
     }
-
-    test_suite = BokChoyTestSuite('bok-choy', **opts)
-    test_suite.run()
+    run_bokchoy(**opts)
 
 
 @task
@@ -67,13 +66,33 @@ def perf_report_bokchoy(options):
         'test_spec': getattr(options, 'test_spec', None),
         'fasttest': getattr(options, 'fasttest', False),
         'imports_dir': getattr(options, 'imports_dir', None),
+        'default_store': getattr(options, 'default_store', None),
         'verbosity': getattr(options, 'verbosity', 2),
         'test_dir': 'performance',
         'ptests': True,
     }
+    run_bokchoy(**opts)
 
-    test_suite = BokChoyTestSuite('bok-choy', **opts)
-    test_suite.run()
+
+def run_bokchoy(**opts):
+    """
+    Runs BokChoyTestSuite with the given options.
+    If a default store is not specified, runs the test suite for both 'draft' and 'split' as the default store.
+    """
+    if opts['default_store'] not in ['draft', 'split']:
+        msg = colorize(
+            'red',
+            'No modulestore specified, running tests for both draft and split.'
+        )
+        print(msg)
+        stores = ['split', 'draft']
+    else:
+        stores = [opts['default_store']]
+
+    for store in stores:
+        opts['default_store'] = store
+        test_suite = BokChoyTestSuite('bok-choy', **opts)
+        test_suite.run()
 
 
 @task

@@ -944,6 +944,7 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
     if LoginFailures.is_feature_enabled():
         LoginFailures.clear_lockout_counter(user)
 
+    # Track the user's sign in
     if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
         tracking_context = tracker.get_tracker().resolve_context()
         analytics.identify(anonymous_id_for_user(user, None), {
@@ -951,41 +952,20 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
             username: username,
         })
 
-        # Track the user's sign in
         # If the user entered the flow via a specific course page, we track that
         registration_course_id = request.session.get('registration_course_id')
-
-        if request.session.get('never_signed_in') is True:
-            # User's first time logging in with this account
-            analytics.track(
-                "edx.bi.user.account.registered", 
-                {
-                    "category": "conversion",
-                    "label": registration_course_id
-                },
-                context={
-                    'Google Analytics': {
-                        'clientId': tracking_context.get('client_id') 
-                    }
+        analytics.track(
+            "edx.bi.user.account.authenticated",
+            {
+                "category": "conversion",
+                "label": registration_course_id
+            },
+            context={
+                'Google Analytics': {
+                    'clientId': tracking_context.get('client_id') 
                 }
-            )
-
-        else:
-            # Returning user's sign-in
-            analytics.track(
-                "edx.bi.user.account.authenticated",
-                {
-                    "category": "conversion",
-                    "label": registration_course_id
-                },
-                context={
-                    'Google Analytics': {
-                        'clientId': tracking_context.get('client_id') 
-                    }
-                }
-            )
-
-        request.session['never_signed_in'] = None
+            }
+        )
         request.session['registration_course_id'] = None
 
     if user is not None and user.is_active:
@@ -1435,6 +1415,30 @@ def create_account(request, post_override=None):  # pylint: disable-msg=too-many
     (user, profile, registration) = ret
 
     dog_stats_api.increment("common.student.account_created")
+
+    # Track the user's registration
+    if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
+        tracking_context = tracker.get_tracker().resolve_context()
+        analytics.identify(anonymous_id_for_user(user, None), {
+            email: email,
+            username: username,
+        })
+
+        registration_course_id = request.session.get('registration_course_id')
+        analytics.track(
+            "edx.bi.user.account.registered", 
+            {
+                "category": "conversion",
+                "label": registration_course_id
+            },
+            context={
+                'Google Analytics': {
+                    'clientId': tracking_context.get('client_id') 
+                }
+            }
+        )
+        request.session['registration_course_id'] = None
+
     create_comments_service_user(user)
 
     context = {

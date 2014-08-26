@@ -15,13 +15,7 @@ from xmodule.modulestore.tests.django_utils import ModuleStoreTestCase
 from xmodule.modulestore.tests.factories import CourseFactory
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 
-from course_groups.views import (
-    list_cohorts,
-    add_cohort,
-    users_in_cohort,
-    add_users_to_cohort,
-    remove_user_from_cohort
-)
+from course_groups.views import list_cohorts, add_cohort, users_in_cohort, add_users_to_cohort, remove_user_from_cohort
 
 class CohortFactory(DjangoModelFactory):
     FACTORY_FOR = CourseUserGroup
@@ -101,8 +95,8 @@ class CohortViewsTestCase(ModuleStoreTestCase):
         """
         Verify that a non-staff user cannot access a given view.
 
-        :view: the view to test.
-        :view_args: a list of arguments (not including the request) to pass to the view
+        `view` is the view to test.
+        `view_args` is a list of arguments (not including the request) to pass to the view
         """
         if request_method == "GET":
             request = RequestFactory().get("dummy_url")
@@ -116,20 +110,20 @@ class CohortViewsTestCase(ModuleStoreTestCase):
 
 
 class ListCohortsTestCase(CohortViewsTestCase):
-    def check_list_cohorts(self, expected_cohorts):
+    def request_list_cohorts(self, course):
         """
-        Check that list_cohorts returns the expected list of cohorts for a given course.
-
-        expected_cohorts is the list of cohorts we expect to see in the response.
+        Call `list_cohorts` for a given `course` and return it's response as a dict.
         """
-        self._verify_non_staff_cannot_access(list_cohorts, "GET", [self.course.id.to_deprecated_string()])
-
         request = RequestFactory().get("dummy_url")
         request.user = self.staff_user
-        response = list_cohorts(request, self.course.id.to_deprecated_string())
+        response = list_cohorts(request, course.id.to_deprecated_string())
         self.assertEqual(response.status_code, 200)
-        response_dict = json.loads(response.content)
+        return json.loads(response.content)
 
+    def verify_lists_expected_cohorts(self, response_dict, expected_cohorts, course):
+        """
+        Verify that the server response (and the course) contains the expected_cohorts.
+        """
         self.assertTrue(response_dict.get("success"))
         self.assertItemsEqual(
             response_dict.get("cohorts"),
@@ -140,14 +134,20 @@ class ListCohortsTestCase(CohortViewsTestCase):
         )
         # verify that the returned cohorts actually belong to the course
         self.assertTrue(
-            all([self._cohort_in_course(cohort.get("name"), self.course) for cohort in response_dict.get("cohorts")])
+            all([self._cohort_in_course(cohort.get("name"), course) for cohort in response_dict.get("cohorts")])
         )
+
+    def test_non_staff(self):
+        """
+        Verify that we cannot access list_cohorts if we're a non-staff user.
+        """
+        self._verify_non_staff_cannot_access(list_cohorts, "GET", [self.course.id.to_deprecated_string()])
 
     def test_no_cohorts(self):
         """
         Verify that no cohorts are in response for a course with no cohorts.
         """
-        self.check_list_cohorts([])
+        self.verify_lists_expected_cohorts(self.request_list_cohorts(self.course), [], self.course)
 
     def test_some_cohorts(self):
         """
@@ -158,39 +158,34 @@ class ListCohortsTestCase(CohortViewsTestCase):
             course_id=self.course.id,
             group_type=CourseUserGroup.COHORT
         )
-        self.check_list_cohorts(expected_cohorts)
+        self.verify_lists_expected_cohorts(
+            self.request_list_cohorts(self.course),
+            expected_cohorts,
+            self.course
+        )
 
 
 class AddCohortTestCase(CohortViewsTestCase):
-    def check_add_cohort(self, cohort_name, expected_error_msg=None):
+    def request_add_cohort(self, cohort_name, course):
         """
-        Check that add_cohort correctly returns the newly added cohort (or error) in the response.
-        Also verify that the cohort was actually created.
-
-        cohort_name is the name of the cohort which should be created.
+        Call `get_add_cohort` and return its response as a dict.
         """
-        self._verify_non_staff_cannot_access(add_cohort, "POST", [self.course.id.to_deprecated_string()])
-
-        cohort_existed_previously = self._cohort_in_course(cohort_name, self.course)
-        if cohort_name is not None:
-            request = RequestFactory().post("dummy_url", {"name": cohort_name})
-        else:
-            request = RequestFactory().post("dummy_url", {"name": ""})
-
+        request = RequestFactory().post("dummy_url", {"name": cohort_name})
         request.user = self.staff_user
-        response = add_cohort(request, self.course.id.to_deprecated_string())
+        response = add_cohort(request, course.id.to_deprecated_string())
         self.assertEqual(response.status_code, 200)
-        response_dict = json.loads(response.content)
+        return json.loads(response.content)
 
-        if cohort_name is None or cohort_existed_previously:
+    def verify_contains_added_cohort(self, response_dict, cohort_name, course, cohort_existed_previously=False):
+        """
+        Check that `add_cohort`'s response correctly returns the newly added cohort (or error) in the response.
+        Also verify that the cohort was actually created/exists.
+        """
+        if cohort_existed_previously:
             self.assertFalse(response_dict.get("success"))
             self.assertEqual(
                 response_dict.get("msg"),
-                expected_error_msg
-            )
-            self.assertEqual(
-                self._cohort_in_course(cohort_name, self.course),
-                True if cohort_existed_previously else False
+                "Can't create two cohorts with the same name"
             )
         else:
             self.assertTrue(response_dict.get("success"))
@@ -198,81 +193,96 @@ class AddCohortTestCase(CohortViewsTestCase):
                 response_dict.get("cohort").get("name"),
                 cohort_name
             )
-            self.assertTrue(self._cohort_in_course(cohort_name, self.course))
+        self.assertTrue(self._cohort_in_course(cohort_name, course))
+
+    def test_non_staff(self):
+        """
+        Verify that non-staff users cannot access add_cohort.
+        """
+        self._verify_non_staff_cannot_access(add_cohort, "POST", [self.course.id.to_deprecated_string()])
 
     def test_new_cohort(self):
         """
         Verify that we can add a new cohort.
         """
-        self.check_add_cohort("New Cohort")
+        cohort_name = "New Cohort"
+        self.verify_contains_added_cohort(
+            self.request_add_cohort(cohort_name, self.course),
+            cohort_name,
+            self.course
+        )
 
     def test_no_cohort(self):
         """
         Verify that we cannot explicitly add no cohort.
         """
-        self.check_add_cohort(cohort_name=None, expected_error_msg="No name specified")
+        response_dict = self.request_add_cohort("", self.course)
+        self.assertFalse(response_dict.get("success"))
+        self.assertEqual(response_dict.get("msg"), "No name specified")
 
     def test_existing_cohort(self):
         """
         Verify that we cannot add a cohort with the same name as an existing cohort.
         """
         self._create_cohorts()
-        self.check_add_cohort(self.cohort1.name, "Can't create two cohorts with the same name")
+        cohort_name = self.cohort1.name
+        self.verify_contains_added_cohort(
+            self.request_add_cohort(cohort_name, self.course),
+            cohort_name,
+            self.course,
+            cohort_existed_previously=True
+        )
 
 
 class UsersInCohortTestCase(CohortViewsTestCase):
-    def check_users_in_cohort(self, cohort, requested_page, expected_page=None, expected_num_pages=None,
-                              expected_users=None, should_return_bad_request=False):
+    def request_users_in_cohort(self, cohort, course, requested_page, should_return_bad_request=False):
         """
-        Check that users_in_cohort returns the expected list of users in a given course and cohort.
-        Also verify that the returned users are actually in the given cohort.
-
-        cohort is the cohort from which users will be returned
-        requested_page is the requested pagination level
-        expected_users is the list of users we expect to see in the response.
-        expected_num_pages is the expected number of pages
+        Call `users_in_cohort` for a given cohort/requested page, and return its response as a dict.
+        When `should_return_bad_request` is True, verify that the response indicates a bad request.
         """
-        self._verify_non_staff_cannot_access(users_in_cohort, "GET", [self.course.id.to_deprecated_string(), cohort.id])
-
         request = RequestFactory().get("dummy_url", {"page": requested_page})
         request.user = self.staff_user
-        response = users_in_cohort(request, self.course.id.to_deprecated_string(), cohort.id)
+        response = users_in_cohort(request, course.id.to_deprecated_string(), cohort.id)
 
         if should_return_bad_request:
             self.assertEqual(response.status_code, 400)
             return
 
         self.assertEqual(response.status_code, 200)
-        response_dict = json.loads(response.content)
+        return json.loads(response.content)
 
+    def verify_users_in_cohort_and_response(self, cohort, response_dict, expected_users, expected_page, expected_num_pages):
+        """
+        Check that the `users_in_cohort` response contains the expected list of users, page number, and total number of
+        pages for a given cohort.  Also verify that those users are actually in the given cohort.
+        """
         self.assertTrue(response_dict.get("success"))
         self.assertEqual(response_dict.get("page"), expected_page)
-        self.assertEqual(
-            response_dict.get("num_pages"),
-            expected_num_pages
-        )
-        self.assertItemsEqual(
-            response_dict.get("users"),
-            [
-                {"username": user.username, "name": user.profile.name, "email": user.email}
-                for user in expected_users
-            ]
-        )
-        # verify that the returned users actually belong to the requested cohort
+        self.assertEqual(response_dict.get("num_pages"), expected_num_pages)
+
         returned_users = [User.objects.get(username=user.get("username")) for user in response_dict.get("users")]
+        self.assertItemsEqual(returned_users, expected_users)
         self.assertTrue(set(returned_users).issubset(cohort.users.all()))
+
+    def test_non_staff(self):
+        """
+        Verify that non-staff users cannot access `check_users_in_cohort`.
+        """
+        cohort = CohortFactory.create(course_id=self.course.id, users=[])
+        self._verify_non_staff_cannot_access(users_in_cohort, "GET", [self.course.id.to_deprecated_string(), cohort.id])
 
     def test_no_users(self):
         """
         Verify that we don't get back any users for a cohort with no users.
         """
         cohort = CohortFactory.create(course_id=self.course.id, users=[])
-        self.check_users_in_cohort(
+        response_dict = self.request_users_in_cohort(cohort, self.course, 1)
+        self.verify_users_in_cohort_and_response(
             cohort,
-            requested_page=1,
+            response_dict,
+            expected_users=[],
             expected_page=1,
-            expected_num_pages=1,
-            expected_users=[]
+            expected_num_pages=1
         )
 
     def test_few_users(self):
@@ -281,12 +291,13 @@ class UsersInCohortTestCase(CohortViewsTestCase):
         """
         users = [UserFactory.create() for _ in range(5)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)
-        self.check_users_in_cohort(
+        response_dict = self.request_users_in_cohort(cohort, self.course, 1)
+        self.verify_users_in_cohort_and_response(
             cohort,
-            requested_page=1,
+            response_dict,
+            expected_users=users,
             expected_page=1,
-            expected_num_pages=1,
-            expected_users=users
+            expected_num_pages=1
         )
 
     def test_many_users(self):
@@ -295,54 +306,49 @@ class UsersInCohortTestCase(CohortViewsTestCase):
         """
         users = [UserFactory.create() for _ in range(101)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)
-        self.check_users_in_cohort(
+        response_dict_1 = self.request_users_in_cohort(cohort, self.course, 1)
+        response_dict_2 = self.request_users_in_cohort(cohort, self.course, 2)
+        self.verify_users_in_cohort_and_response(
             cohort,
-            requested_page=1,
+            response_dict_1,
+            expected_users=users[:100],
             expected_page=1,
-            expected_num_pages=2,
-            expected_users=users[:100]
+            expected_num_pages=2
         )
-        self.check_users_in_cohort(
+        self.verify_users_in_cohort_and_response(
             cohort,
-            requested_page=2,
+            response_dict_2,
+            expected_users=users[100:],
             expected_page=2,
-            expected_num_pages=2,
-            expected_users=users[100:]
+            expected_num_pages=2
         )
 
     def test_out_of_range(self):
         """
         Verify we get the proper responses when asking for pages which don't exist.
 
-        Expect a HttpResponseBadRequest when requesting a negative page.
+        Expect a `HttpResponseBadRequest` when requesting a negative page.
         Expect a blank page of users when requesting a page which is greater than the actual number of pages.
         """
         users = [UserFactory.create() for _ in range(101)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)
-        self.check_users_in_cohort(
+        self.request_users_in_cohort(cohort, self.course, -1, should_return_bad_request=True)
+        response = self.request_users_in_cohort(cohort, self.course, 3)
+        self.verify_users_in_cohort_and_response(
             cohort,
-            requested_page=-1,
-            should_return_bad_request=True
-        )
-        self.check_users_in_cohort(
-            cohort,
-            requested_page=3,
+            response,
+            expected_users=[],
             expected_page=3,
-            expected_num_pages=2,
-            expected_users=[]
+            expected_num_pages=2
         )
 
     def test_non_numeric_page(self):
         """
-        Verify that we get an HTTP 400 (bad request) when the page we request isn't a valid integer.
+        Verify that we get a `HttpResponseBadRequest` (bad request) when the page we request isn't a valid integer.
         """
         users = [UserFactory.create() for _ in range(5)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)
-        self.check_users_in_cohort(
-            cohort,
-            requested_page="invalid",
-            should_return_bad_request=True
-        )
+        self.request_users_in_cohort(cohort, self.course, "invalid", should_return_bad_request=True)
 
 
 class AddUsersToCohortTestCase(CohortViewsTestCase):
@@ -350,126 +356,177 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
         super(AddUsersToCohortTestCase, self).setUp()
         self._create_cohorts()
 
-    def check_add_users_to_cohort(self, users_string, cohort, course, expected_added=None, expected_changed=None,
-                                  expected_present=None, expected_unknown=None, expected_error_message=None,
-                                  should_raise_404=False):
+    def request_add_users_to_cohort(self, users_string, cohort, course, should_raise_404=False):
         """
-        Check that add_users_to_cohort returns the expected result and has the
-        expected side effects. The given users will be added to cohort1.
-
-        users_string is the string input entered by the client
-
-        cohort is the cohort to which the users should be added
-
-        course is the course within which the users are being cohorted
-
-        expected_added is a list of users
-
-        expected_changed is a list of (user, previous_cohort) tuples
-
-        expected_present is a list of (user, email/username) tuples where
-        email/username corresponds to the input
-
-        expected_unknown is a list of strings corresponding to the input
-
-        should_raise_404 is a boolean dictating whether we should verify a 404 error or not
+        Call `add_users_to_cohort` for a given cohort, course, and list of users, returning its response as a dict.
+        When `should_raise_404` is True, verify that the request raised a Http404.
         """
-        self._verify_non_staff_cannot_access(add_users_to_cohort, "POST", [course.id.to_deprecated_string(), cohort.id])
-
-        expected_added = expected_added or []
-        expected_changed = expected_changed or []
-        expected_present = expected_present or []
-        expected_unknown = expected_unknown or []
         request = RequestFactory().post("dummy_url", {"users": users_string})
         request.user = self.staff_user
-
-        if not should_raise_404:
-            response = add_users_to_cohort(request, course.id.to_deprecated_string(), cohort.id)
-            self.assertEqual(response.status_code, 200)
-            result = json.loads(response.content)
-            self.assertTrue(result.get("success"))
-            self.assertItemsEqual(
-                result.get("added"),
-                [
-                    {"username": user.username, "name": user.profile.name, "email": user.email}
-                    for user in expected_added
-                ]
-            )
-            self.assertItemsEqual(
-                result.get("changed"),
-                [
-                    {
-                        "username": user.username,
-                        "name": user.profile.name,
-                        "email": user.email,
-                        "previous_cohort": previous_cohort
-                    }
-                    for (user, previous_cohort) in expected_changed
-                ]
-            )
-            self.assertItemsEqual(
-                result.get("present"),
-                [username_or_email for (_, username_or_email) in expected_present]
-            )
-            self.assertItemsEqual(result.get("unknown"), expected_unknown)
-            for user in expected_added + [user for (user, _) in expected_changed + expected_present]:
-                self.assertEqual(
-                    CourseUserGroup.objects.get(
-                        course_id=course.id,
-                        group_type=CourseUserGroup.COHORT,
-                        users__id=user.id
-                    ),
-                    cohort
-                )
-        else:
+        if should_raise_404:
             self.assertRaises(
                 Http404,
                 lambda: add_users_to_cohort(request, course.id.to_deprecated_string(), cohort.id)
             )
+        else:
+            response = add_users_to_cohort(request, course.id.to_deprecated_string(), cohort.id)
+            self.assertEqual(response.status_code, 200)
+            return json.loads(response.content)
+
+    def verify_added_users_to_cohort(self, response_dict, cohort, course, expected_added, expected_changed,
+                                     expected_present, expected_unknown):
+        """
+        Check that add_users_to_cohort returned the expected response and has the expected side effects.
+
+        `expected_added` is a list of users
+        `expected_changed` is a list of (user, previous_cohort) tuples
+        `expected_present` is a list of (user, email/username) tuples where email/username corresponds to the input
+        `expected_unknown` is a list of strings corresponding to the input
+        """
+        self.assertTrue(response_dict.get("success"))
+        self.assertItemsEqual(
+            response_dict.get("added"),
+            [
+                {"username": user.username, "name": user.profile.name, "email": user.email}
+                for user in expected_added
+            ]
+        )
+        self.assertItemsEqual(
+            response_dict.get("changed"),
+            [
+                {
+                    "username": user.username,
+                    "name": user.profile.name,
+                    "email": user.email,
+                    "previous_cohort": previous_cohort
+                }
+                for (user, previous_cohort) in expected_changed
+            ]
+        )
+        self.assertItemsEqual(
+            response_dict.get("present"),
+            [username_or_email for (_, username_or_email) in expected_present]
+        )
+        self.assertItemsEqual(response_dict.get("unknown"), expected_unknown)
+        for user in expected_added + [user for (user, _) in expected_changed + expected_present]:
+            self.assertEqual(
+                CourseUserGroup.objects.get(
+                    course_id=course.id,
+                    group_type=CourseUserGroup.COHORT,
+                    users__id=user.id
+                ),
+                cohort
+            )
+
+    def test_non_staff(self):
+        """
+        Verify that non-staff users cannot access `check_users_in_cohort`.
+        """
+        cohort = CohortFactory.create(course_id=self.course.id, users=[])
+        self._verify_non_staff_cannot_access(add_users_to_cohort, "POST", [self.course.id.to_deprecated_string(), cohort.id])
 
     def test_empty(self):
-        self.check_add_users_to_cohort("", self.cohort1, self.course)
-
-    def test_only_added(self):
-        self.check_add_users_to_cohort(
-            ",".join([user.username for user in self.cohortless_users]),
+        """
+        Verify that adding an empty list of users to a cohort has no result.
+        """
+        response_dict = self.request_add_users_to_cohort("", self.cohort1, self.course)
+        self.verify_added_users_to_cohort(
+            response_dict,
             self.cohort1,
             self.course,
-            expected_added=self.cohortless_users
+            expected_added=[],
+            expected_changed=[],
+            expected_present=[],
+            expected_unknown=[]
+        )
+
+    def test_only_added(self):
+        """
+        Verify that we can add users to their first cohort.
+        """
+        response_dict = self.request_add_users_to_cohort(
+            ",".join([user.username for user in self.cohortless_users]),
+            self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
+            self.course,
+            expected_added=self.cohortless_users,
+            expected_changed=[],
+            expected_present=[],
+            expected_unknown=[]
         )
 
     def test_only_changed(self):
-        self.check_add_users_to_cohort(
+        """
+        Verify that we can move users to a different cohort.
+        """
+        response_dict = self.request_add_users_to_cohort(
             ",".join([user.username for user in self.cohort2_users + self.cohort3_users]),
             self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
             self.course,
+            expected_added=[],
             expected_changed=(
                 [(user, self.cohort2.name) for user in self.cohort2_users] +
                 [(user, self.cohort3.name) for user in self.cohort3_users]
-            )
+            ),
+            expected_present=[],
+            expected_unknown=[]
         )
 
     def test_only_present(self):
+        """
+        Verify that we can 'add' users to their current cohort.
+        """
         usernames = [user.username for user in self.cohort1_users]
-        self.check_add_users_to_cohort(
+        response_dict = self.request_add_users_to_cohort(
             ",".join(usernames),
             self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
             self.course,
-            expected_present=[(user, user.username) for user in self.cohort1_users]
+            expected_added=[],
+            expected_changed=[],
+            expected_present=[(user, user.username) for user in self.cohort1_users],
+            expected_unknown=[]
         )
 
     def test_only_unknown(self):
+        """
+        Verify that non-existent users are not added.
+        """
         usernames = ["unknown_user{}".format(i) for i in range(3)]
-        self.check_add_users_to_cohort(
+        response_dict = self.request_add_users_to_cohort(
             ",".join(usernames),
             self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
             self.course,
+            expected_added=[],
+            expected_changed=[],
+            expected_present=[],
             expected_unknown=usernames
         )
 
     def test_all(self):
+        """
+        Test all adding conditions together.
+        """
         unknowns = ["unknown_user{}".format(i) for i in range(3)]
-        self.check_add_users_to_cohort(
+        response_dict = self.request_add_users_to_cohort(
             ",".join(
                 unknowns +
                 [
@@ -478,19 +535,27 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
                 ]
             ),
             self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
             self.course,
-            self.cohortless_users,
-            (
+            expected_added=self.cohortless_users,
+            expected_changed=(
                 [(user, self.cohort2.name) for user in self.cohort2_users] +
                 [(user, self.cohort3.name) for user in self.cohort3_users]
             ),
-            [(user, user.username) for user in self.cohort1_users],
-            unknowns
+            expected_present=[(user, user.username) for user in self.cohort1_users],
+            expected_unknown=unknowns
         )
 
     def test_emails(self):
+        """
+        Verify that we can use emails to identify users.
+        """
         unknown = "unknown_user@example.com"
-        self.check_add_users_to_cohort(
+        response_dict = self.request_add_users_to_cohort(
             ",".join([
                 self.cohort1_users[0].email,
                 self.cohort2_users[0].email,
@@ -498,16 +563,24 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
                 unknown
             ]),
             self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
             self.course,
-            [self.cohortless_users[0]],
-            [(self.cohort2_users[0], self.cohort2.name)],
-            [(self.cohort1_users[0], self.cohort1_users[0].email)],
-            [unknown]
+            expected_added=[self.cohortless_users[0]],
+            expected_changed=[(self.cohort2_users[0], self.cohort2.name)],
+            expected_present=[(self.cohort1_users[0], self.cohort1_users[0].email)],
+            expected_unknown=[unknown]
         )
 
     def test_delimiters(self):
+        """
+        Verify that we can use different types of whitespace to delimit usernames in the user string.
+        """
         unknown = "unknown_user"
-        self.check_add_users_to_cohort(
+        response_dict = self.request_add_users_to_cohort(
             " {} {}\t{}, \r\n{}".format(
                 unknown,
                 self.cohort1_users[0].username,
@@ -515,68 +588,100 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
                 self.cohortless_users[0].username
             ),
             self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
             self.course,
-            [self.cohortless_users[0]],
-            [(self.cohort2_users[0], self.cohort2.name)],
-            [(self.cohort1_users[0], self.cohort1_users[0].username)],
-            [unknown]
+            expected_added=[self.cohortless_users[0]],
+            expected_changed=[(self.cohort2_users[0], self.cohort2.name)],
+            expected_present=[(self.cohort1_users[0], self.cohort1_users[0].username)],
+            expected_unknown=[unknown]
         )
 
     def test_bad_cohort(self):
-        """Try to add users to a cohort for a course they're not enrolled in"""
+        """
+        Verify that users are not added to a cohort of a course they're not enrolled in.
+        """
         unenrolled_usernames = [user.username for user in self.unenrolled_users]
-        self.check_add_users_to_cohort(
+        response_dict = self.request_add_users_to_cohort(
             ",".join(unenrolled_usernames),
             self.cohort1,
+            self.course
+        )
+        self.verify_added_users_to_cohort(
+            response_dict,
+            self.cohort1,
             self.course,
+            expected_added=[],
+            expected_changed=[],
+            expected_present=[],
             expected_unknown=unenrolled_usernames
         )
 
     def test_non_existent_cohort(self):
-        """Try to add users to a cohort which does not belong to the given course"""
+        """
+        Verify that an error is raised when trying to add users to a cohort which does not belong to the given course.
+        """
         users = [UserFactory.create(username="user{0}".format(i)) for i in range(3)]
         usernames = [user.username for user in users]
         wrong_course_key = SlashSeparatedCourseKey("some", "arbitrary", "course")
         wrong_course_cohort = CohortFactory.create(name="wrong_cohort", course_id=wrong_course_key, users=[])
-        self.check_add_users_to_cohort(
+        self.request_add_users_to_cohort(
             ",".join(usernames),
             wrong_course_cohort,
             self.course,
             should_raise_404=True
         )
 
-class RemoveUserFromCohortTestCase(CohortViewsTestCase):
-    def check_remove_user_from_cohort(self, username, cohort, expected_error_msg=None):
-        """
-        Check that remove_user_from_cohort properly removes a user from a cohort and returns appropriate success.
-        If the removal should fail, verify that the returned error message matches the expected one.
-        """
-        self._verify_non_staff_cannot_access(remove_user_from_cohort, "POST", [self.course.id.to_deprecated_string(), cohort.id])
 
+class RemoveUserFromCohortTestCase(CohortViewsTestCase):
+    def request_remove_user_from_cohort(self, username, cohort):
+        """
+        Call `remove_user_from_cohort` with the given username and cohort.
+        """
         if username is not None:
             request = RequestFactory().post("dummy_url", {"username": username})
         else:
             request = RequestFactory().post("dummy_url")
         request.user = self.staff_user
         response = remove_user_from_cohort(request, self.course.id.to_deprecated_string(), cohort.id)
-        response_dict = json.loads(response.content)
-
         self.assertEqual(response.status_code, 200)
+        return json.loads(response.content)
 
-        if username is None or not self._user_exists(username):
-            self.assertFalse(response_dict.get("success"))
-            self.assertEqual(response_dict.get("msg"), expected_error_msg)
-        else:
+    def verify_removed_user_from_cohort(self, username, response_dict, cohort, expected_error_msg=None):
+        """
+        Check that `remove_user_from_cohort` properly removes a user from a cohort and returns appropriate success.
+        If the removal should fail, verify that the returned error message matches the expected one.
+        """
+        if expected_error_msg is None:
             self.assertTrue(response_dict.get("success"))
             self.assertIsNone(response_dict.get("msg"))
             self.assertFalse(self._user_in_cohort(username, cohort))
+        else:
+            self.assertFalse(response_dict.get("success"))
+            self.assertEqual(response_dict.get("msg"), expected_error_msg)
+
+    def test_non_staff(self):
+        """
+        Verify that non-staff users cannot access `check_users_in_cohort`.
+        """
+        cohort = CohortFactory.create(course_id=self.course.id, users=[])
+        self._verify_non_staff_cannot_access(remove_user_from_cohort, "POST", [self.course.id.to_deprecated_string(), cohort.id])
 
     def test_no_username_given(self):
         """
         Verify that we get an error message when omitting a username.
         """
         cohort = CohortFactory.create(course_id=self.course.id, users=[])
-        self.check_remove_user_from_cohort(None, cohort, expected_error_msg='No username specified')
+        response_dict = self.request_remove_user_from_cohort(None, cohort)
+        self.verify_removed_user_from_cohort(
+            None,
+            response_dict,
+            cohort,
+            expected_error_msg='No username specified'
+        )
 
     def test_user_does_not_exist(self):
         """
@@ -584,8 +689,13 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
         """
         username = "bogus"
         cohort = CohortFactory.create(course_id=self.course.id, users=[])
-        self.check_remove_user_from_cohort(
+        response_dict = self.request_remove_user_from_cohort(
             username,
+            cohort
+        )
+        self.verify_removed_user_from_cohort(
+            username,
+            response_dict,
             cohort,
             expected_error_msg='No user \'{0}\''.format(username)
         )
@@ -596,7 +706,8 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
         """
         user = UserFactory.create()
         cohort = CohortFactory.create(course_id=self.course.id, users=[])
-        self.check_remove_user_from_cohort(user.username, cohort)
+        response_dict = self.request_remove_user_from_cohort(user.username, cohort)
+        self.verify_removed_user_from_cohort(user.username, response_dict, cohort)
 
     def test_can_remove_user_from_cohort(self):
         """
@@ -604,4 +715,5 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
         """
         user = UserFactory.create()
         cohort = CohortFactory.create(course_id=self.course.id, users=[user])
-        self.check_remove_user_from_cohort(user.username, cohort)
+        response_dict = self.request_remove_user_from_cohort(user.username, cohort)
+        self.verify_removed_user_from_cohort(user.username, response_dict, cohort)

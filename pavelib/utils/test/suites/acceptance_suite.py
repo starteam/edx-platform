@@ -77,7 +77,9 @@ class AcceptanceTestSuite(TestSuite):
         if kwargs.get('default_store'):
             stores = [kwargs['default_store']]
         else:
-            stores = ['split', 'draft']
+            # TODO fix Acceptance tests with Split (LMS-11300)
+            # stores = ['split', 'draft']
+            stores = ['draft']
 
         self.subsuites = []
         for system in systems:

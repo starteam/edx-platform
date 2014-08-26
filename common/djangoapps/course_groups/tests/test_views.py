@@ -221,15 +221,8 @@ class AddCohortTestCase(CohortViewsTestCase):
 
 
 class UsersInCohortTestCase(CohortViewsTestCase):
-    def check_users_in_cohort(
-            self,
-            cohort,
-            requested_page,
-            expected_page=None,
-            expected_num_pages=None,
-            expected_users=None,
-            should_return_bad_request=False
-    ):
+    def check_users_in_cohort(self, cohort, requested_page, expected_page=None, expected_num_pages=None,
+                              expected_users=None, should_return_bad_request=False):
         """
         Check that users_in_cohort returns the expected list of users in a given course and cohort.
         Also verify that the returned users are actually in the given cohort.
@@ -357,18 +350,9 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
         super(AddUsersToCohortTestCase, self).setUp()
         self._create_cohorts()
 
-    def check_add_users_to_cohort(
-            self,
-            users_string,
-            cohort,
-            course,
-            expected_added=None,
-            expected_changed=None,
-            expected_present=None,
-            expected_unknown=None,
-            expected_error_message=None,
-            should_raise_404=False
-    ):
+    def check_add_users_to_cohort(self, users_string, cohort, course, expected_added=None, expected_changed=None,
+                                  expected_present=None, expected_unknown=None, expected_error_message=None,
+                                  should_raise_404=False):
         """
         Check that add_users_to_cohort returns the expected result and has the
         expected side effects. The given users will be added to cohort1.

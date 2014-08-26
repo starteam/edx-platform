@@ -24,19 +24,19 @@ set -e
 #
 #   `SHARD` is a number (1, 2, or 3) indicating which subset of the tests
 #       to build.  Currently, "lms-acceptance" and "bok-choy" each have two
-#       shards (1 and 2), "cms-acceptance" has three shards (1, 2, and 3), 
-#       and all the other test suites have one shard.  
-# 
-#       For the "bok-choy", the tests are put into shard groups using the nose 
-#       'attr' decorator (e.g. "@attr('shard_1')").  Currently, anything with 
+#       shards (1 and 2), "cms-acceptance" has three shards (1, 2, and 3),
+#       and all the other test suites have one shard.
+#
+#       For the "bok-choy", the tests are put into shard groups using the nose
+#       'attr' decorator (e.g. "@attr('shard_1')").  Currently, anything with
 #       the 'shard_1' attribute will run in the first shard.  All other bok-choy
 #       tests will run in shard 2.
-# 
-#       For the lettuce acceptance tests, ("lms-" and "cms-acceptance") they 
+#
+#       For the lettuce acceptance tests, ("lms-" and "cms-acceptance") they
 #       are decorated with "@shard_{}" (e.g. @shard_1 for the first shard).
 #       The lettuce tests must have a shard specified to be run in jenkins,
 #       as there is no shard that runs unspecified tests.
-# 
+#
 #
 #   Jenkins configuration:
 #
@@ -93,6 +93,9 @@ fi
 # Activate the Python virtualenv
 source $HOME/edx-venv/bin/activate
 
+# If environment variable 'SHARD' is not set, default to 'all'
+SHARD=${SHARD:="all"}
+
 case "$TEST_SUITE" in
 
     "quality")
@@ -132,6 +135,9 @@ END
 
             "2")
                 paver test_bokchoy --extra_args="-a '!shard_1'"
+               ;;
+            "all")
+                paver test_bokchoy
                ;;
         esac
         paver bokchoy_coverage

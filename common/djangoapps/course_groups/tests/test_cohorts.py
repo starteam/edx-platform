@@ -440,7 +440,7 @@ class TestCohorts(django.test.TestCase):
         )
         # UserDoesNotExist if user is not enrolled in the course for this cohort
         self.assertRaises(
-            User.DoesNotExist,
+            CourseEnrollment.DoesNotExist,
             lambda: cohorts.add_user_to_cohort(first_cohort, "RandomUsername")
         )
 

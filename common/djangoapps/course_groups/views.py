@@ -11,6 +11,7 @@ import re
 
 from opaque_keys.edx.locations import SlashSeparatedCourseKey
 from courseware.courses import get_course_with_access
+from student.models import CourseEnrollment
 from edxmako.shortcuts import render_to_response
 
 from . import cohorts
@@ -156,6 +157,8 @@ def add_users_to_cohort(request, course_key_string, cohort_id):
                   'previous_cohort': ...}, ...],
      'present': [str1, str2, ...],    # already there
      'unknown': [str1, str2, ...]}
+
+     Raises Http404 if the cohort cannot be found for the given course.
     """
     # this is a string when we get it here
     course_key = SlashSeparatedCourseKey.from_deprecated_string(course_key_string)
@@ -192,7 +195,7 @@ def add_users_to_cohort(request, course_key_string, cohort_id):
                 added.append(info)
         except ValueError:
             present.append(username_or_email)
-        except User.DoesNotExist:
+        except (User.DoesNotExist, CourseEnrollment.DoesNotExist):
             unknown.append(username_or_email)
 
     return json_http_response({'success': True,

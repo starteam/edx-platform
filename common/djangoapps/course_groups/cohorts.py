@@ -3,7 +3,6 @@ This file contains the logic for cohort groups, as exposed internally to the
 forums, and to the cohort admin views.
 """
 
-from django.contrib.auth.models import User
 from django.http import Http404
 
 import logging
@@ -246,13 +245,14 @@ def add_user_to_cohort(cohort, username_or_email):
         Tuple of User object and string (or None) indicating previous cohort
 
     Raises:
-        User.DoesNotExist if can't find user, or if the user is not enrolled in the cohort's course.
+        User.DoesNotExist if can't find user.
+        CourseEnrollment.DoesNotExist if the user is not enrolled in the cohort's course.
 
         ValueError if user already present in this cohort.
     """
     user = get_user_by_username_or_email(username_or_email)
     if not CourseEnrollment.is_enrolled(user, cohort.course_id):
-        raise User.DoesNotExist("User \"{user}\" not in course".format(user=username_or_email))
+        raise CourseEnrollment.DoesNotExist("User \"{user}\" not in course".format(user=username_or_email))
 
     previous_cohort = None
 

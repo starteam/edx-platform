@@ -246,7 +246,8 @@ def add_user_to_cohort(cohort, username_or_email):
 
     Raises:
         User.DoesNotExist if can't find user.
-        CourseEnrollment.DoesNotExist if the user is not enrolled in the cohort's course.
+        CourseEnrollment.DoesNotExist if the user is not enrolled in the
+        cohort's course.
 
         ValueError if user already present in this cohort.
     """

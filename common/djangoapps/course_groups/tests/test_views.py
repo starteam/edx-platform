@@ -61,7 +61,8 @@ class CohortViewsTestCase(ModuleStoreTestCase):
 
     def _cohort_in_course(self, cohort_name, course):
         """
-        Returns true iff `course` contains a cohort with the name `cohort_name`.
+        Returns true iff `course` contains a cohort with the name
+        `cohort_name`.
         """
         try:
             CourseUserGroup.objects.get(
@@ -85,7 +86,8 @@ class CohortViewsTestCase(ModuleStoreTestCase):
         Verify that a non-staff user cannot access a given view.
 
         `view` is the view to test.
-        `view_args` is a list of arguments (not including the request) to pass to the view
+        `view_args` is a list of arguments (not including the request) to pass
+            to the view.
         """
         if request_method == "GET":
             request = RequestFactory().get("dummy_url")
@@ -104,7 +106,8 @@ class ListCohortsTestCase(CohortViewsTestCase):
     """
     def request_list_cohorts(self, course):
         """
-        Call `list_cohorts` for a given `course` and return it's response as a dict.
+        Call `list_cohorts` for a given `course` and return it's response as a
+        dict.
         """
         request = RequestFactory().get("dummy_url")
         request.user = self.staff_user
@@ -114,7 +117,8 @@ class ListCohortsTestCase(CohortViewsTestCase):
 
     def verify_lists_expected_cohorts(self, response_dict, expected_cohorts, course):
         """
-        Verify that the server response (and the course) contains the expected_cohorts.
+        Verify that the server response (and the course) contains the
+        expected_cohorts.
         """
         self.assertTrue(response_dict.get("success"))
         self.assertItemsEqual(
@@ -173,8 +177,9 @@ class AddCohortTestCase(CohortViewsTestCase):
 
     def verify_contains_added_cohort(self, response_dict, cohort_name, course, cohort_existed_previously=False):
         """
-        Check that `add_cohort`'s response correctly returns the newly added cohort (or error) in the response.
-        Also verify that the cohort was actually created/exists.
+        Check that `add_cohort`'s response correctly returns the newly added
+        cohort (or error) in the response.  Also verify that the cohort was
+        actually created/exists.
         """
         if cohort_existed_previously:
             self.assertFalse(response_dict.get("success"))
@@ -217,7 +222,8 @@ class AddCohortTestCase(CohortViewsTestCase):
 
     def test_existing_cohort(self):
         """
-        Verify that we cannot add a cohort with the same name as an existing cohort.
+        Verify that we cannot add a cohort with the same name as an existing
+        cohort.
         """
         self._create_cohorts()
         cohort_name = self.cohort1.name
@@ -235,8 +241,9 @@ class UsersInCohortTestCase(CohortViewsTestCase):
     """
     def request_users_in_cohort(self, cohort, course, requested_page, should_return_bad_request=False):
         """
-        Call `users_in_cohort` for a given cohort/requested page, and return its response as a dict.
-        When `should_return_bad_request` is True, verify that the response indicates a bad request.
+        Call `users_in_cohort` for a given cohort/requested page, and return
+        its response as a dict.  When `should_return_bad_request` is True,
+        verify that the response indicates a bad request.
         """
         request = RequestFactory().get("dummy_url", {"page": requested_page})
         request.user = self.staff_user
@@ -252,8 +259,9 @@ class UsersInCohortTestCase(CohortViewsTestCase):
     def verify_users_in_cohort_and_response(self, cohort, response_dict, expected_users, expected_page,
                                             expected_num_pages):
         """
-        Check that the `users_in_cohort` response contains the expected list of users, page number, and total number of
-        pages for a given cohort.  Also verify that those users are actually in the given cohort.
+        Check that the `users_in_cohort` response contains the expected list of
+        users, page number, and total number of pages for a given cohort.  Also
+        verify that those users are actually in the given cohort.
         """
         self.assertTrue(response_dict.get("success"))
         self.assertEqual(response_dict.get("page"), expected_page)
@@ -286,7 +294,8 @@ class UsersInCohortTestCase(CohortViewsTestCase):
 
     def test_few_users(self):
         """
-        Verify that we get back all users for a cohort when the cohort has <=100 users.
+        Verify that we get back all users for a cohort when the cohort has
+        <=100 users.
         """
         users = [UserFactory.create() for _ in range(5)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)
@@ -324,10 +333,12 @@ class UsersInCohortTestCase(CohortViewsTestCase):
 
     def test_out_of_range(self):
         """
-        Verify we get the proper responses when asking for pages which don't exist.
+        Verify we get the proper responses when asking for pages which don't
+        exist.
 
         Expect a `HttpResponseBadRequest` when requesting a negative page.
-        Expect a blank page of users when requesting a page which is greater than the actual number of pages.
+        Expect a blank page of users when requesting a page which is greater
+            than the actual number of pages.
         """
         users = [UserFactory.create() for _ in range(101)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)
@@ -343,7 +354,8 @@ class UsersInCohortTestCase(CohortViewsTestCase):
 
     def test_non_numeric_page(self):
         """
-        Verify that we get a `HttpResponseBadRequest` (bad request) when the page we request isn't a valid integer.
+        Verify that we get a `HttpResponseBadRequest` (bad request) when the
+        page we request isn't a valid integer.
         """
         users = [UserFactory.create() for _ in range(5)]
         cohort = CohortFactory.create(course_id=self.course.id, users=users)
@@ -360,8 +372,9 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
 
     def request_add_users_to_cohort(self, users_string, cohort, course, should_raise_404=False):
         """
-        Call `add_users_to_cohort` for a given cohort, course, and list of users, returning its response as a dict.
-        When `should_raise_404` is True, verify that the request raised a Http404.
+        Call `add_users_to_cohort` for a given cohort, course, and list of
+        users, returning its response as a dict.  When `should_raise_404` is
+        True, verify that the request raised a Http404.
         """
         request = RequestFactory().post("dummy_url", {"users": users_string})
         request.user = self.staff_user
@@ -378,11 +391,13 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
     def verify_added_users_to_cohort(self, response_dict, cohort, course, expected_added, expected_changed,
                                      expected_present, expected_unknown):
         """
-        Check that add_users_to_cohort returned the expected response and has the expected side effects.
+        Check that add_users_to_cohort returned the expected response and has
+        the expected side effects.
 
         `expected_added` is a list of users
         `expected_changed` is a list of (user, previous_cohort) tuples
-        `expected_present` is a list of (user, email/username) tuples where email/username corresponds to the input
+        `expected_present` is a list of (user, email/username) tuples where
+            email/username corresponds to the input
         `expected_unknown` is a list of strings corresponding to the input
         """
         self.assertTrue(response_dict.get("success"))
@@ -583,7 +598,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
 
     def test_delimiters(self):
         """
-        Verify that we can use different types of whitespace to delimit usernames in the user string.
+        Verify that we can use different types of whitespace to delimit
+        usernames in the user string.
         """
         unknown = "unknown_user"
         response_dict = self.request_add_users_to_cohort(
@@ -608,7 +624,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
 
     def test_bad_cohort(self):
         """
-        Verify that users are not added to a cohort of a course they're not enrolled in.
+        Verify that users are not added to a cohort of a course they're not
+        enrolled in.
         """
         unenrolled_usernames = [user.username for user in self.unenrolled_users]
         response_dict = self.request_add_users_to_cohort(
@@ -628,7 +645,8 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
 
     def test_non_existent_cohort(self):
         """
-        Verify that an error is raised when trying to add users to a cohort which does not belong to the given course.
+        Verify that an error is raised when trying to add users to a cohort
+        which does not belong to the given course.
         """
         users = [UserFactory.create(username="user{0}".format(i)) for i in range(3)]
         usernames = [user.username for user in users]
@@ -661,8 +679,9 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
 
     def verify_removed_user_from_cohort(self, username, response_dict, cohort, expected_error_msg=None):
         """
-        Check that `remove_user_from_cohort` properly removes a user from a cohort and returns appropriate success.
-        If the removal should fail, verify that the returned error message matches the expected one.
+        Check that `remove_user_from_cohort` properly removes a user from a
+        cohort and returns appropriate success.  If the removal should fail,
+        verify that the returned error message matches the expected one.
         """
         if expected_error_msg is None:
             self.assertTrue(response_dict.get("success"))
@@ -698,7 +717,8 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
 
     def test_user_does_not_exist(self):
         """
-        Verify that we get an error message when the requested user to remove does not exist.
+        Verify that we get an error message when the requested user to remove
+        does not exist.
         """
         username = "bogus"
         cohort = CohortFactory.create(course_id=self.course.id, users=[])
@@ -715,7 +735,8 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
 
     def test_can_remove_user_not_in_cohort(self):
         """
-        Verify that we can "remove" a user from a cohort even if they are not a member of that cohort.
+        Verify that we can "remove" a user from a cohort even if they are not a
+        member of that cohort.
         """
         user = UserFactory.create()
         cohort = CohortFactory.create(course_id=self.course.id, users=[])

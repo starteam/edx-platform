@@ -78,18 +78,7 @@ class CohortViewsTestCase(ModuleStoreTestCase):
         """
         Return true iff a user with `username` exists in `cohort`.
         """
-        return username in map(lambda user: user.username, cohort.users.all())
-
-    def _user_exists(self, username):
-        """
-        Return true iff a user with `username` exists at all.
-        """
-        try:
-            User.objects.get(username=username)
-        except User.DoesNotExist:
-            return False
-        else:
-            return True
+        return username in [user.username for user in cohort.users.all()]
 
     def _verify_non_staff_cannot_access(self, view, request_method, view_args):
         """
@@ -110,6 +99,9 @@ class CohortViewsTestCase(ModuleStoreTestCase):
 
 
 class ListCohortsTestCase(CohortViewsTestCase):
+    """
+    Tests the `list_cohorts` view.
+    """
     def request_list_cohorts(self, course):
         """
         Call `list_cohorts` for a given `course` and return it's response as a dict.
@@ -166,9 +158,12 @@ class ListCohortsTestCase(CohortViewsTestCase):
 
 
 class AddCohortTestCase(CohortViewsTestCase):
+    """
+    Tests the `add_cohort` view.
+    """
     def request_add_cohort(self, cohort_name, course):
         """
-        Call `get_add_cohort` and return its response as a dict.
+        Call `add_cohort` and return its response as a dict.
         """
         request = RequestFactory().post("dummy_url", {"name": cohort_name})
         request.user = self.staff_user
@@ -235,6 +230,9 @@ class AddCohortTestCase(CohortViewsTestCase):
 
 
 class UsersInCohortTestCase(CohortViewsTestCase):
+    """
+    Tests the `users_in_cohort` view.
+    """
     def request_users_in_cohort(self, cohort, course, requested_page, should_return_bad_request=False):
         """
         Call `users_in_cohort` for a given cohort/requested page, and return its response as a dict.
@@ -251,7 +249,8 @@ class UsersInCohortTestCase(CohortViewsTestCase):
         self.assertEqual(response.status_code, 200)
         return json.loads(response.content)
 
-    def verify_users_in_cohort_and_response(self, cohort, response_dict, expected_users, expected_page, expected_num_pages):
+    def verify_users_in_cohort_and_response(self, cohort, response_dict, expected_users, expected_page,
+                                            expected_num_pages):
         """
         Check that the `users_in_cohort` response contains the expected list of users, page number, and total number of
         pages for a given cohort.  Also verify that those users are actually in the given cohort.
@@ -352,6 +351,9 @@ class UsersInCohortTestCase(CohortViewsTestCase):
 
 
 class AddUsersToCohortTestCase(CohortViewsTestCase):
+    """
+    Tests the `add_users_to_cohort` view.
+    """
     def setUp(self):
         super(AddUsersToCohortTestCase, self).setUp()
         self._create_cohorts()
@@ -423,7 +425,11 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
         Verify that non-staff users cannot access `check_users_in_cohort`.
         """
         cohort = CohortFactory.create(course_id=self.course.id, users=[])
-        self._verify_non_staff_cannot_access(add_users_to_cohort, "POST", [self.course.id.to_deprecated_string(), cohort.id])
+        self._verify_non_staff_cannot_access(
+            add_users_to_cohort,
+            "POST",
+            [self.course.id.to_deprecated_string(), cohort.id]
+        )
 
     def test_empty(self):
         """
@@ -637,6 +643,9 @@ class AddUsersToCohortTestCase(CohortViewsTestCase):
 
 
 class RemoveUserFromCohortTestCase(CohortViewsTestCase):
+    """
+    Tests the `remove_user_from_cohort` view.
+    """
     def request_remove_user_from_cohort(self, username, cohort):
         """
         Call `remove_user_from_cohort` with the given username and cohort.
@@ -668,7 +677,11 @@ class RemoveUserFromCohortTestCase(CohortViewsTestCase):
         Verify that non-staff users cannot access `check_users_in_cohort`.
         """
         cohort = CohortFactory.create(course_id=self.course.id, users=[])
-        self._verify_non_staff_cannot_access(remove_user_from_cohort, "POST", [self.course.id.to_deprecated_string(), cohort.id])
+        self._verify_non_staff_cannot_access(
+            remove_user_from_cohort,
+            "POST",
+            [self.course.id.to_deprecated_string(), cohort.id]
+        )
 
     def test_no_username_given(self):
         """

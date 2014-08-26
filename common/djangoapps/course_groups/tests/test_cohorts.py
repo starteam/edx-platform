@@ -103,12 +103,12 @@ class TestCohorts(django.test.TestCase):
 
         # Make sure we get a Http404 if there's no course
         fake_key = SlashSeparatedCourseKey('a', 'b', 'c')
-        self.assertRaises(Http404, lambda: cohorts.is_course_cohorted(fake_key)) #  without lambda exception will not be caught
+        self.assertRaises(Http404, lambda: cohorts.is_course_cohorted(fake_key))
 
     def test_get_cohort_id(self):
         """
-        Make sure that cohorts.get_cohort_id() correctly returns the cohort id, or raises a ValueError when given an invalid
-        course key.
+        Make sure that cohorts.get_cohort_id() correctly returns the cohort id, or raises a ValueError when given an
+        invalid course key.
         """
         course = modulestore().get_course(self.toy_course_key)
         self.assertFalse(course.is_cohorted)
@@ -123,7 +123,10 @@ class TestCohorts(django.test.TestCase):
         cohort.users.add(user)
         self.assertEqual(cohorts.get_cohort_id(user, course.id), cohort.id)
 
-        self.assertRaises(ValueError, lambda: cohorts.get_cohort_id(user, SlashSeparatedCourseKey("course", "does_not", "exist")))
+        self.assertRaises(
+            ValueError,
+            lambda: cohorts.get_cohort_id(user, SlashSeparatedCourseKey("course", "does_not", "exist"))
+        )
 
     def test_get_cohort(self):
         """
@@ -295,8 +298,8 @@ class TestCohorts(django.test.TestCase):
 
     def test_get_cohorted_commentables(self):
         """
-        Make sure cohorts.get_cohorted_commentables() correctly returns a list of strings representing cohorted commentables.
-        Also verify that we can't get the cohorted commentables from a course which does not exist.
+        Make sure cohorts.get_cohorted_commentables() correctly returns a list of strings representing cohorted
+        commentables.  Also verify that we can't get the cohorted commentables from a course which does not exist.
         """
         course = modulestore().get_course(self.toy_course_key)
 
@@ -332,8 +335,8 @@ class TestCohorts(django.test.TestCase):
 
     def test_get_cohort_by_name(self):
         """
-        Make sure cohorts.get_cohort_by_name() properly finds a cohort by name for a given course.  Also verify that it raises
-        an error when the cohort is not found.
+        Make sure cohorts.get_cohort_by_name() properly finds a cohort by name for a given course.  Also verify that it
+        raises an error when the cohort is not found.
         """
         course = modulestore().get_course(self.toy_course_key)
 
@@ -400,7 +403,7 @@ class TestCohorts(django.test.TestCase):
         handles errors.
         """
         course_user = User.objects.create(username="Username", email="a@b.com")
-        random_user = User.objects.create(username="RandomUsername", email="b@b.com")
+        User.objects.create(username="RandomUsername", email="b@b.com")
         course = modulestore().get_course(self.toy_course_key)
         CourseEnrollment.enroll(course_user, self.toy_course_key)
         first_cohort = CourseUserGroup.objects.create(
@@ -460,7 +463,7 @@ class TestCohorts(django.test.TestCase):
             []
         )
 
-        first_cohort = CourseUserGroup.objects.create(
+        CourseUserGroup.objects.create(
             name="FirstCohort",
             course_id=course.id,
             group_type=CourseUserGroup.COHORT
@@ -471,7 +474,7 @@ class TestCohorts(django.test.TestCase):
             ["FirstCohort"]
         )
 
-        second_cohort = CourseUserGroup.objects.create(
+        CourseUserGroup.objects.create(
             name="SecondCohort",
             course_id=course.id,
             group_type=CourseUserGroup.COHORT

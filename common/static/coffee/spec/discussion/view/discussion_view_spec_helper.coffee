@@ -11,6 +11,7 @@ class @DiscussionViewSpecHelper
           comments_count: 0,
           abuse_flaggers: [],
           body: "",
+          title: "dummy title",
           created_at: "2014-08-18T01:02:03Z"
         }
         $.extend(thread, props)

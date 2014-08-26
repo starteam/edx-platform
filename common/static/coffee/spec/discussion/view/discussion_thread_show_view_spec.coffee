@@ -9,6 +9,7 @@ describe "DiscussionThreadShowView", ->
             user_id: @user.id,
             username: @user.get('username'),
             course_id: $$course_id,
+            title: "dummy title",
             body: "this is a thread",
             created_at: "2013-04-03T20:08:39Z",
             abuse_flaggers: [],

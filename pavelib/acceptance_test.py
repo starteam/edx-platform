@@ -44,6 +44,12 @@ def test_acceptance(options):
             'No system specified, running tests for both cms and lms.'
         )
         print(msg)
+    if opts['default_store'] not in ['draft', 'split']:
+        msg = colorize(
+            'red',
+            'No modulestore specified, running tests for both draft and split.'
+        )
+        print(msg)
 
     suite = AcceptanceTestSuite('{} acceptance'.format(opts['system']), **opts)
     suite.run()

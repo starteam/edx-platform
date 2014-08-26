@@ -91,7 +91,9 @@ from util.password_policy_validators import (
 
 from third_party_auth import pipeline, provider
 from xmodule.error_module import ErrorDescriptor
+
 import analytics
+from eventtracking import tracker
 
 
 log = logging.getLogger("edx.student")
@@ -943,6 +945,7 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
         LoginFailures.clear_lockout_counter(user)
 
     if settings.FEATURES.get('SEGMENT_IO_LMS') and hasattr(settings, 'SEGMENT_IO_LMS_KEY'):
+        tracking_context = tracker.get_tracker().resolve_context()
         analytics.identify(anonymous_id_for_user(user, None), {
             email: email,
             username: username,
@@ -954,17 +957,33 @@ def login_user(request, error=""):  # pylint: disable-msg=too-many-statements,un
 
         if request.session.get('never_signed_in') is True:
             # User's first time logging in with this account
-            analytics.track("edx.bi.user.account.registered", {
-                "category": "conversion",
-                "label": registration_course_id
-            })
+            analytics.track(
+                "edx.bi.user.account.registered", 
+                {
+                    "category": "conversion",
+                    "label": registration_course_id
+                },
+                context={
+                    'Google Analytics': {
+                        'clientId': tracking_context.get('client_id') 
+                    }
+                }
+            )
 
         else:
             # Returning user's sign-in
-            analytics.track("edx.bi.user.account.authenticated", {
-                "category": "conversion",
-                "label": registration_course_id
-            })
+            analytics.track(
+                "edx.bi.user.account.authenticated",
+                {
+                    "category": "conversion",
+                    "label": registration_course_id
+                },
+                context={
+                    'Google Analytics': {
+                        'clientId': tracking_context.get('client_id') 
+                    }
+                }
+            )
 
         request.session['never_signed_in'] = None
         request.session['registration_course_id'] = None

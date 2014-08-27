@@ -3,7 +3,6 @@ describe 'ResponseCommentShowView', ->
         DiscussionSpecHelper.setUpGlobals()
         # set up the container for the response to go in
         DiscussionSpecHelper.setUnderscoreFixtures()
-        appendSetFixtures('<ol class="responses"></ol>')
 
         # set up a model for a new Comment
         @comment = new Comment {

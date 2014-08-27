@@ -144,8 +144,6 @@ describe "ThreadResponseShowView", ->
         endorseButton = @view.$(".action-endorse")
         expect(endorseButton.length).toEqual(1)
         expect(endorseButton.closest(".actions-item")).toHaveClass("is-hidden")
-        endorseButton.click()
-        expect(endorseButton).not.toHaveClass("is-checked")
 
     it "does not allow a student who is not the author of a question thread to mark an answer", ->
         @thread.set({
@@ -156,8 +154,6 @@ describe "ThreadResponseShowView", ->
         endorseButton = @view.$(".action-answer")
         expect(endorseButton.length).toEqual(1)
         expect(endorseButton.closest(".actions-item")).toHaveClass("is-hidden")
-        endorseButton.click()
-        expect(endorseButton).not.toHaveClass("is-checked")
 
     describe "labels", ->
 

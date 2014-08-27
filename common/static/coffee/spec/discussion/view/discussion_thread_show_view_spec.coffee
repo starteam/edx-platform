@@ -62,10 +62,14 @@ describe "DiscussionThreadShowView", ->
         it "exposes the pinning control only to authorized users", ->
             @thread.updateInfo({ability: {can_openclose: false}})
             @view.render()
-            expect(@view.$el.find(".action-pin").parent()).toHaveClass("is-hidden")
+            expect(@view.$el.find(".action-pin").closest(".is-hidden")).toExist()
             @thread.updateInfo({ability: {can_openclose: true}})
             @view.render()
-            expect(@view.$el.find(".action-pin").parent()).not.toHaveClass("is-hidden")
+            expect(@view.$el.find(".action-pin").closest(".is-hidden")).not.toExist()
+
+        it "handles events correctly", ->
+            @view.render()
+            DiscussionViewSpecHelper.checkButtonEvents(@view, "togglePin", ".action-pin")
 
     describe "labels", ->
 

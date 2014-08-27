@@ -20,8 +20,8 @@ class @DiscussionViewSpecHelper
         button = view.$el.find(".action-vote")
         expect(button.hasClass("is-checked")).toBe(user.voted(model))
         expect(button.attr("aria-checked")).toEqual(user.voted(model).toString())
-        expect(button.find(".js-visual-vote-count").text()).toMatch("#{model.get('votes').up_count} Vote")
-        expect(button.find(".sr.js-sr-vote-count").text()).toMatch("#{model.get('votes').up_count} vote")
+        expect(button.find(".js-visual-vote-count").text()).toMatch("^#{model.get('votes').up_count} Votes?$")
+        expect(button.find(".sr.js-sr-vote-count").text()).toMatch("^currently #{model.get('votes').up_count} votes?$")
 
     @checkRenderVote = (view, model) ->
         view.render()
@@ -45,19 +45,19 @@ class @DiscussionViewSpecHelper
         deferred.resolve()
 
     @checkUpvote = (view, model, user, event) ->
-        expect(user.get('upvoted_ids')).toEqual([])
-        expect(model.get('votes').up_count).toEqual(42)
+        expect(model.id in user.get('upvoted_ids')).toBe(false)
+        initialVoteCount = model.get('votes').up_count
         triggerVoteEvent(view, event, DiscussionUtil.urlFor("upvote_#{model.get('type')}", model.id) + "?ajax=1")
-        expect(user.get('upvoted_ids')).toEqual([model.id])
-        expect(model.get('votes').up_count).toEqual(43)
+        expect(model.id in user.get('upvoted_ids')).toBe(true)
+        expect(model.get('votes').up_count).toEqual(initialVoteCount + 1)
 
     @checkUnvote = (view, model, user, event) ->
         user.vote(model)
-        expect(user.get('upvoted_ids')).toEqual([model.id])
-        expect(model.get('votes').up_count).toEqual(43)
+        expect(model.id in user.get('upvoted_ids')).toBe(true)
+        initialVoteCount = model.get('votes').up_count
         triggerVoteEvent(view, event, DiscussionUtil.urlFor("undo_vote_for_#{model.get('type')}", model.id) + "?ajax=1")
         expect(user.get('upvoted_ids')).toEqual([])
-        expect(model.get('votes').up_count).toEqual(42)
+        expect(model.get('votes').up_count).toEqual(initialVoteCount - 1)
 
     @checkButtonEvents = (view, viewFunc, buttonSelector) ->
         spy = spyOn(view, viewFunc)

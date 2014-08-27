@@ -46,7 +46,7 @@
 
 <script aria-hidden="true" type="text/template" id="thread-show-template">
   <div class="discussion-post">
-      <header class="post-header">
+      <header>
       ${"<% if (obj.group_id) { %>"}
       <div class="group-visibility-label">${"<%- obj.group_string%>"}</div>
               ${"<% }  %>"}
@@ -195,7 +195,7 @@
           </div>
     </header>
 
-    <div class="response-local"><div class="response-body">${"<%- body %>"}</div>
+    <div class="response-body">${"<%- body %>"}</div>
 </script>
 
 <script aria-hidden="true" type="text/template" id="thread-response-edit-template">
@@ -549,7 +549,7 @@
 
 <%def name="primaryAction(action_class, icon, sr_label, unchecked_label, checked_label)">
     <script type="text/template" id="forum-action-${action_class}">
-        <li class="actions-item action-primary is-visible">
+        <li class="actions-item">
             <a href="javascript:void(0)" class="action-button action-${action_class}" role="checkbox" aria-checked="false">
                 <span class="sr">${sr_label}</span>
                 <span class="action-label" aria-hidden="true">
@@ -567,8 +567,8 @@ ${primaryAction("answer", "ok", _("Mark as Answer"), _("Mark as Answer"), _("Unm
 ${primaryAction("follow", "star", _("Follow"), _("Follow"), _("Unfollow"))}
 
 <script type="text/template" id="forum-action-vote">
-    <li class="actions-item action-primary is-visible">
-        <a href="#" class="action-button action-vote vote-btn" role="checkbox" aria-checked="false">
+    <li class="actions-item">
+        <a href="#" class="action-button action-vote" role="checkbox" aria-checked="false">
             ## Vote counts are populated by JS
             <span class="sr">${_("Vote")}</span>
             <span class="sr js-sr-vote-count"></span>
@@ -630,7 +630,6 @@ ${secondaryAction("delete", "remove", _("Delete"))}
                 </a>
                 <div class="actions-dropdown" id="action-menu-${"<%= contentType %>"}" aria-expanded="false">
                   <ul class="actions-dropdown-list">
-                        ## TODO: what to do about a11y here?
                     ${"<% _.each(secondaryActions, function(action) { print(_.template($('#forum-action-' + action).html(), {})) }) %>"}
                   </ul>
                 </div>

@@ -111,7 +111,7 @@ if Backbone?
     isFlagged: ->
       user = DiscussionUtil.getUser()
       flaggers = @get("abuse_flaggers")
-      (user and user.id in flaggers) or (DiscussionUtil.isFlagModerator and flaggers.length > 0)
+      user and (user.id in flaggers or (DiscussionUtil.isPrivilegedUser(user.id) and flaggers.length > 0))
 
     incrementVote: (increment) ->
       newVotes = _.clone(@get("votes"))

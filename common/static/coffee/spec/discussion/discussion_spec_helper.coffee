@@ -6,6 +6,9 @@ class @DiscussionSpecHelper
         window.user = new DiscussionUser({username: "test_user", id: "567", upvoted_ids: []})
         DiscussionUtil.setUser(window.user)
 
+    @makeModerator = () ->
+        DiscussionUtil.roleIds["Moderator"].push(parseInt(window.user.id))
+
     @setUnderscoreFixtures = ->
         appendSetFixtures("""
 <div id="fixture-element"></div>

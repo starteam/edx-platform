@@ -102,7 +102,7 @@ describe "DiscussionThreadShowView", ->
             expectOneElement(@view, '.post-label-reported', false)
 
         it 'displays the reported label when appropriate for a flag moderator', ->
-            DiscussionUtil.loadFlagModerator("True")
+            DiscussionSpecHelper.makeModerator()
             expectOneElement(@view, '.post-label-reported', false)
             # flagged by current user - should be labelled
             @thread.set('abuse_flaggers', [DiscussionUtil.getUser().id])

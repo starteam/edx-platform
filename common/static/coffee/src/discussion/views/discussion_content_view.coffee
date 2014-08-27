@@ -135,10 +135,7 @@ if Backbone?
         @$(".post-label-pinned").toggleClass("is-hidden", not pinned)
 
       abuse_flaggers: (abuse_flaggers) ->
-        flagged = (
-          window.user.id in abuse_flaggers or
-          (DiscussionUtil.isFlagModerator and abuse_flaggers.length > 0)
-        )
+        flagged = @model.isFlagged()
         @updateButtonState(".action-report", flagged)
         @$(".post-label-reported").toggleClass("is-hidden", not flagged)
 
@@ -251,7 +248,7 @@ if Backbone?
 
     toggleReport: (event) =>
       event.preventDefault()
-      if model.isFlagged()
+      if @model.isFlagged()
         is_flagging = false
         msg = gettext("We had some trouble removing your flag on this post.  Please try again.")
       else

@@ -81,7 +81,6 @@ describe 'ResponseCommentShowView', ->
                 expect(elements).toHaveClass("is-hidden")
 
         it 'displays the reported label when appropriate for a non-staff user', ->
-            DiscussionUtil.loadFlagModerator("False")
             @comment.set('abuse_flaggers', [])
             expectOneElement(@view, '.post-label-reported', false)
             # flagged by current user - should be labelled
@@ -92,7 +91,7 @@ describe 'ResponseCommentShowView', ->
             expectOneElement(@view, '.post-label-reported', false)
 
         it 'displays the reported label when appropriate for a flag moderator', ->
-            DiscussionUtil.loadFlagModerator("True")
+            DiscussionSpecHelper.makeModerator()
             @comment.set('abuse_flaggers', [])
             expectOneElement(@view, '.post-label-reported', false)
             # flagged by current user - should be labelled

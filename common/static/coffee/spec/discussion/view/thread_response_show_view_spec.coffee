@@ -167,7 +167,6 @@ describe "ThreadResponseShowView", ->
                 expect(elements).toHaveClass("is-hidden")
 
         it 'displays the reported label when appropriate for a non-staff user', ->
-            DiscussionUtil.loadFlagModerator("False")
             expectOneElement(@view, '.post-label-reported', false)
             # flagged by current user - should be labelled
             @comment.set('abuse_flaggers', [DiscussionUtil.getUser().id])
@@ -177,7 +176,7 @@ describe "ThreadResponseShowView", ->
             expectOneElement(@view, '.post-label-reported', false)
 
         it 'displays the reported label when appropriate for a flag moderator', ->
-            DiscussionUtil.loadFlagModerator("True")
+            DiscussionSpecHelper.makeModerator()
             expectOneElement(@view, '.post-label-reported', false)
             # flagged by current user - should be labelled
             @comment.set('abuse_flaggers', [DiscussionUtil.getUser().id])

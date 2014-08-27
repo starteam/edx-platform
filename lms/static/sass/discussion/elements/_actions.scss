@@ -72,14 +72,14 @@
       }
 
       &:after {
-        border-color: rgba(255, 255, 255, 0);
+        border-color: $transparent;
         border-bottom-color: $white;
         border-width: 6px;
         margin-right: 1px;
       }
 
       &:before {
-        border-color: rgba(178, 178, 178, 0);
+        border-color: $transparent;
         border-bottom-color: $gray-l3;
         border-width: 7px;
       }

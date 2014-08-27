@@ -230,11 +230,11 @@
         '{}',
         {{'time_ago': '<span class=\"timeago\" title=\"' + created_at + '\">' + created_at + '</span>', 'author': author_display}},
         true
-        )""".format(
-               ## Translators: 'timeago' is a placeholder for a fuzzy, relative timestamp (see: https://github.com/rmm5t/jquery-timeago)
-               escapejs(_('posted %(time_ago)s by %(author)s'))
-             )
-           %>
+      )""".format(
+        ## Translators: 'timeago' is a placeholder for a fuzzy, relative timestamp (see: https://github.com/rmm5t/jquery-timeago)
+        escapejs(_('posted %(time_ago)s by %(author)s'))
+      )
+    %>
     <p class="posted-details">
     ${'<%='}${js_block}${'%>'}
     </p>
@@ -573,9 +573,9 @@ ${primaryAction("follow", "star", _("Follow"), _("Follow"), _("Unfollow"))}
             <span class="sr">${_("Vote")}</span>
             <span class="sr js-sr-vote-count"></span>
 
-             <span class="action-label" aria-hidden="true">
-               <span class="js-visual-vote-count"></span>
-             </span>
+            <span class="action-label" aria-hidden="true">
+              <span class="js-visual-vote-count"></span>
+            </span>
 
             <span class="action-icon" aria-hidden="true">
                 <i class="icon icon-plus"></i>

@@ -63,8 +63,8 @@ def check_firefox_version():
 
     if firefox_ver != expected_firefox_ver:
         raise Exception(
-            'Update required for firefox version.\n\n'
-            'To update:'
+            'Required firefox version not found.\n\n'
+            'To install the required version:\n'
             'As the root user in devstack, run the following:\n\n'
             '\t$ sudo wget -O /tmp/firefox_28.deb https://s3.amazonaws.com/vagrant.testeng.edx.org/firefox_28.0%2Bbuild2-0ubuntu0.12.04.1_amd64.deb\n'
             '\t$ sudo gdebi -nq /tmp/firefox_28.deb\n\n'

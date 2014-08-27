@@ -17,21 +17,21 @@ if Backbone?
 
     abilityRenderer:
       editable:
-        enable: -> @$(".action-edit").closest("li").removeClass("is-hidden")
-        disable: -> @$(".action-edit").closest("li").addClass("is-hidden")
+        enable: -> @$(".action-edit").closest(".actions-item").removeClass("is-hidden")
+        disable: -> @$(".action-edit").closest(".actions-item").addClass("is-hidden")
       can_delete:
-        enable: -> @$(".action-delete").closest("li").removeClass("is-hidden")
-        disable: -> @$(".action-delete").closest("li").addClass("is-hidden")
+        enable: -> @$(".action-delete").closest(".actions-item").removeClass("is-hidden")
+        disable: -> @$(".action-delete").closest(".actions-item").addClass("is-hidden")
       can_openclose:
         enable: ->
           _.each(
             [".action-close", ".action-pin"],
-            (selector) => @$(selector).closest("li").removeClass("is-hidden")
+            (selector) => @$(selector).closest(".actions-item").removeClass("is-hidden")
           )
         disable: ->
           _.each(
             [".action-close", ".action-pin"],
-            (selector) => @$(selector).closest("li").addClass("is-hidden")
+            (selector) => @$(selector).closest(".actions-item").addClass("is-hidden")
           )
 
     renderPartialAttrs: ->
@@ -197,8 +197,6 @@ if Backbone?
 
     toggleEndorse: (event) =>
       event.preventDefault()
-      if not @model.canBeEndorsed()
-        return
       is_endorsing = not @model.get("endorsed")
       url = @model.urlFor("endorse")
       updates =
@@ -214,7 +212,7 @@ if Backbone?
           msg = gettext("We had some trouble marking this response endorsed.  Please try again.")
         else
           msg = gettext("We had some trouble removing this endorsement.  Please try again.")
-      beforeFunc = () => @model.trigger("comment:endorse")
+      beforeFunc = () => @trigger("comment:endorse")
       DiscussionUtil.updateWithUndo(
         @model,
         updates,
@@ -253,8 +251,7 @@ if Backbone?
 
     toggleReport: (event) =>
       event.preventDefault()
-      user = DiscussionUtil.getUser()
-      if user.id in @model.get("abuse_flaggers") or (DiscussionUtil.isFlagModerator and @model.get("abuse_flaggers").length > 0)
+      if model.isFlagged()
         is_flagging = false
         msg = gettext("We had some trouble removing your flag on this post.  Please try again.")
       else
@@ -262,7 +259,7 @@ if Backbone?
         msg = gettext("We had some trouble reporting this post.  Please try again.")
       url = @model.urlFor(if is_flagging then "flagAbuse" else "unFlagAbuse")
       updates =
-        abuse_flaggers: (if is_flagging then _.union else _.difference)(@model.get("abuse_flaggers"), [user.id])
+        abuse_flaggers: (if is_flagging then _.union else _.difference)(@model.get("abuse_flaggers"), [DiscussionUtil.getUser().id])
       DiscussionUtil.updateWithUndo(
         @model,
         updates,

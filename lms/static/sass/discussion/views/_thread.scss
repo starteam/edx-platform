@@ -21,9 +21,6 @@ body.discussion, .discussion-module {
       vertical-align: middle;
       width: flex-grid(3,12);
     }
-
-    .post-body {
-    }
   }
 
   // response layout
@@ -31,7 +28,8 @@ body.discussion, .discussion-module {
     min-height: ($baseline*7.5);
 
     .username {
-      font-weight: 700;
+      @include font-size(14);
+      @extend %t-weight5;
     }
 
     .response-header-content {

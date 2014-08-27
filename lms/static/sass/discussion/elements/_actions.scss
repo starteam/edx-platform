@@ -25,11 +25,6 @@
     }
   }
 
-  // CASE: comment actions
-  .comment-actions-list .actions-item {
-    height: auto;
-  }
-
   // ====================
 
   // UI: general actions dropdown layout
@@ -38,7 +33,7 @@
     @extend %ui-depth1;
     display: none;
     position: absolute;
-    top: 17px;
+    top: 100%;
     right: 0;
     pointer-events: none;
     overflow: hidden;
@@ -58,10 +53,12 @@
       position: relative;
       width: 100%;
       border-radius: 3px;
+      margin: 0;
       border: 1px solid $gray-l3;
       padding: ($baseline/2) ($baseline*0.75);
       background: $white;
 
+      // ui triangle/nub
       &:after,
       &:before {
         bottom: 100%;
@@ -74,7 +71,6 @@
         pointer-events: none;
       }
 
-      // ui triangle/nub
       &:after {
         border-color: rgba(255, 255, 255, 0);
         border-bottom-color: $white;
@@ -136,7 +132,6 @@
 
 
     &:hover, &:focus {
-      border: 1px solid $gray-l3;
 
       .action-label {
         opacity: 1;
@@ -150,7 +145,11 @@
     // specific button styles
     &.action-follow {
 
-      &.is-checked {
+      .action-label {
+        color: $blue-d1;
+      }
+
+      &.is-checked, &:hover, &:focus {
 
         .action-icon {
           background-color: $forum-color-following;
@@ -160,17 +159,7 @@
       }
 
       &:hover, &:focus {
-        border: 1px solid $blue-d1;
-
-        .action-label {
-          color: $blue-d1;
-        }
-
-        .action-icon {
-          border: 1px solid $forum-color-following;
-          background-color: $forum-color-following;
-          color: $white;
-        }
+        border-color: $forum-color-following;
       }
     }
 
@@ -180,7 +169,7 @@
         opacity: 1;
       }
 
-      &.is-checked {
+      &.is-checked, &:hover, &:focus {
 
         .action-icon {
           background-color: $green-d1;
@@ -190,23 +179,17 @@
       }
 
       &:hover, &:focus {
-        border: 1px solid $green-d2;
+        border-color: $green-d2;
 
         .action-label {
           color: $green-d2;
-        }
-
-        .action-icon {
-          border: 1px solid $green-d1;
-          background-color: $green-d1;
-          color: $white;
         }
       }
     }
 
     &.action-endorse {
 
-      &.is-checked {
+      &.is-checked, &:hover, &:focus {
 
         .action-icon {
           background-color: $blue-d1;
@@ -216,42 +199,30 @@
       }
 
       &:hover, &:focus {
-        border: 1px solid $blue-d2;
+        border-color: $blue-d2;
 
         .action-label {
           color: $blue-d2;
-        }
-
-        .action-icon {
-          border: 1px solid $blue-d1;
-          background-color: $blue-d1;
-          color: $white;
         }
       }
     }
 
     &.action-answer {
 
-      &.is-checked {
-
-        .action-icon {
-          background-color: $green-d1;
-          border: 1px solid $green-d2;
-          color: $white;
-        }
-      }
-
-      &:hover, &:focus {
-        border: 1px solid $green-d2;
-
-        .action-label {
-          color: $green-d2;
-        }
+      &.is-checked, &:hover, &:focus {
 
         .action-icon {
           border: 1px solid $green-d1;
           background-color: $green-d1;
           color: $white;
+        }
+      }
+
+      &:hover, &:focus {
+        border-color: $green-d1;
+
+        .action-label {
+          color: $green-d2;
         }
       }
     }
@@ -260,19 +231,18 @@
     &.action-more {
       position: relative;
 
-      &:hover,
-      &:focus {
-        border: 1px solid $gray;
-
-        .action-label {
-          opacity: 1;
-          color: $black;
-        }
+      &:hover, &:focus {
+        border-color: $gray;
 
         .action-icon {
           border: 1px solid $gray;
           background-color: $gray;
           color: $white;
+        }
+
+        .action-label {
+          opacity: 1;
+          color: $black;
         }
       }
     }
@@ -285,7 +255,6 @@
     // UI: secondary action
     .action-list-item {
       @extend %t-copy-sub2;
-      margin: 0;
       display: block;
       padding: ($baseline/10) 0;
       white-space: nowrap;

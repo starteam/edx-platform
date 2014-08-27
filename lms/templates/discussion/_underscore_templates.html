@@ -60,7 +60,7 @@
                 ## Translators: post_type describes the kind of post this is
                 ## (e.g. "question" or "discussion"); time_ago is how much time
                 ## has passed since the post was created (e.g. "4 hours ago")
-                ${"{post_type} posted {time_ago} by {author}".format(
+                ${_("{post_type} posted {time_ago} by {author}").format(
                     post_type="<%- thread_type %>",
                     time_ago="<span class='timeago' title='<%- created_at %>'><%- created_at %></span>",
                     author="<%= author_display %>"

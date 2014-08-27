@@ -36,15 +36,11 @@
     top: 100%;
     right: 0;
     pointer-events: none;
-    overflow: hidden;
     min-width: ($baseline*6.5);
-    height: 0;
 
     &.is-expanded {
       display: block;
       pointer-events: auto;
-      overflow: visible;
-      height: auto;
     }
 
     .actions-dropdown-list {

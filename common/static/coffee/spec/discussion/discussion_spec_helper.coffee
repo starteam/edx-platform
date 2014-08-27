@@ -58,7 +58,7 @@ browser and pasting the output.  When that file changes, this one should be rege
 
 <script aria-hidden="true" type="text/template" id="thread-show-template">
   <div class="discussion-post">
-      <header class="post-header">
+      <header>
       <% if (obj.group_id) { %>
       <div class="group-visibility-label"><%- obj.group_string%></div>
               <% }  %>
@@ -80,6 +80,7 @@ browser and pasting the output.  When that file changes, this one should be rege
                 _.template(
                     $('#forum-actions').html(),
                     {
+                        contentId: cid,
                         contentType: 'post',
                         primaryActions: ['vote', 'follow'],
                         secondaryActions: ['pin', 'edit', 'delete', 'report', 'close']
@@ -139,7 +140,7 @@ browser and pasting the output.  When that file changes, this one should be rege
 </script>
 
 <script aria-hidden="true" type="text/template" id="thread-response-show-template">
-    <header class="response-header response-local">
+    <header>
       <div class="response-header-content">
         <%= author_display %>
         <p class="posted-details">
@@ -166,6 +167,7 @@ browser and pasting the output.  When that file changes, this one should be rege
                 _.template(
                     $('#forum-actions').html(),
                     {
+                        contentId: cid,
                         contentType: 'response',
                         primaryActions: ['vote', thread.get('thread_type') == 'question' ? 'answer' : 'endorse'],
                         secondaryActions: ['edit', 'delete', 'report']
@@ -175,7 +177,7 @@ browser and pasting the output.  When that file changes, this one should be rege
           </div>
     </header>
 
-    <div class="response-local"><div class="response-body"><%- body %></div>
+    <div class="response-body"><%- body %></div>
 </script>
 
 <script aria-hidden="true" type="text/template" id="thread-response-edit-template">
@@ -197,6 +199,7 @@ browser and pasting the output.  When that file changes, this one should be rege
         _.template(
             $('#forum-actions').html(),
             {
+                contentId: cid,
                 contentType: 'comment',
                 primaryActions: [],
                 secondaryActions: ['edit', 'delete', 'report']
@@ -210,7 +213,7 @@ browser and pasting the output.  When that file changes, this one should be rege
         'posted %(time_ago)s by %(author)s',
         {'time_ago': '<span class="timeago" title="' + created_at + '">' + created_at + '</span>', 'author': author_display},
         true
-        )%>
+      )%>
     </p>
     <div class="post-labels">
       <span class="post-label-reported"><i class="icon icon-flag"></i>Reported</span>
@@ -423,13 +426,13 @@ browser and pasting the output.  When that file changes, this one should be rege
 </script>
 
 <script aria-hidden="true" type="text/template" id="new-post-menu-entry-template">
-    <li role="menuitem">
+    <li role="menuitem" class="topic-menu-item">
         <a href="#" class="topic-title" data-discussion-id="<%- id %>" data-cohorted="<%- is_cohorted %>"><%- text %></a>
     </li>
 </script>
 
 <script aria-hidden="true" type="text/template" id="new-post-menu-category-template">
-    <li role="menuitem">
+    <li role="menuitem" class="topic-menu-item">
         <span class="topic-title"><%- text %></span>
         <ul role="menu" class="topic-submenu"><%= entries %></ul>
     </li>
@@ -439,7 +442,7 @@ browser and pasting the output.  When that file changes, this one should be rege
 
 
     <script type="text/template" id="forum-action-endorse">
-        <li class="actions-item action-primary is-visible">
+        <li class="actions-item">
             <a href="javascript:void(0)" class="action-button action-endorse" role="checkbox" aria-checked="false">
                 <span class="sr">Endorse</span>
                 <span class="action-label" aria-hidden="true">
@@ -453,7 +456,7 @@ browser and pasting the output.  When that file changes, this one should be rege
 
 
     <script type="text/template" id="forum-action-answer">
-        <li class="actions-item action-primary is-visible">
+        <li class="actions-item">
             <a href="javascript:void(0)" class="action-button action-answer" role="checkbox" aria-checked="false">
                 <span class="sr">Mark as Answer</span>
                 <span class="action-label" aria-hidden="true">
@@ -467,7 +470,7 @@ browser and pasting the output.  When that file changes, this one should be rege
 
 
     <script type="text/template" id="forum-action-follow">
-        <li class="actions-item action-primary is-visible">
+        <li class="actions-item">
             <a href="javascript:void(0)" class="action-button action-follow" role="checkbox" aria-checked="false">
                 <span class="sr">Follow</span>
                 <span class="action-label" aria-hidden="true">
@@ -481,14 +484,14 @@ browser and pasting the output.  When that file changes, this one should be rege
 
 
 <script type="text/template" id="forum-action-vote">
-    <li class="actions-item action-primary is-visible">
-        <a href="#" class="action-button action-vote vote-btn" role="checkbox" aria-checked="false">
+    <li class="actions-item">
+        <a href="#" class="action-button action-vote" role="checkbox" aria-checked="false">
             <span class="sr">Vote</span>
             <span class="sr js-sr-vote-count"></span>
 
-             <span class="action-label" aria-hidden="true">
-               <span class="js-visual-vote-count"></span>
-             </span>
+            <span class="action-label" aria-hidden="true">
+              <span class="js-visual-vote-count"></span>
+            </span>
 
             <span class="action-icon" aria-hidden="true">
                 <i class="icon icon-plus"></i>
@@ -553,7 +556,7 @@ browser and pasting the output.  When that file changes, this one should be rege
 
     <script type="text/template" id="forum-action-edit">
         <li class="actions-item">
-            <a href="javascript:void(0)" class="action-list-item action-edit">
+            <a href="javascript:void(0)" class="action-list-item action-edit" role="button">
                 <span class="action-label">Edit</span>
                 <span class="action-icon"><i class="icon icon-pencil"></i></span>
             </a>
@@ -563,7 +566,7 @@ browser and pasting the output.  When that file changes, this one should be rege
 
     <script type="text/template" id="forum-action-delete">
         <li class="actions-item">
-            <a href="javascript:void(0)" class="action-list-item action-delete">
+            <a href="javascript:void(0)" class="action-list-item action-delete" role="button">
                 <span class="action-label">Delete</span>
                 <span class="action-icon"><i class="icon icon-remove"></i></span>
             </a>
@@ -576,11 +579,11 @@ browser and pasting the output.  When that file changes, this one should be rege
         <% _.each(primaryActions, function(action) { print(_.template($('#forum-action-' + action).html(), {})) }) %>
         <li class="actions-item is-visible">
             <div class="more-wrapper">
-                <a href="javascript:void(0)" class="action-button action-more" role="menu">
+                <a href="javascript:void(0)" class="action-button action-more" role="button" aria-haspopup="true" aria-controls="action-menu-<%= contentId %>">
                     <span class="action-label">More</span>
                     <span class="action-icon"><i class="icon icon-ellipsis-horizontal"></i></span>
                 </a>
-                <div class="actions-dropdown">
+                <div class="actions-dropdown" id="action-menu-<%= contentType %>" aria-expanded="false">
                   <ul class="actions-dropdown-list">
                     <% _.each(secondaryActions, function(action) { print(_.template($('#forum-action-' + action).html(), {})) }) %>
                   </ul>

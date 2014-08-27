@@ -73,7 +73,7 @@ class @DiscussionViewSpecHelper
         expect(spy).toHaveBeenCalled()
         
     @checkVoteButtonEvents = (view) ->
-        @checkButtonEvents(view, "toggleVote", ".vote-btn")
+        @checkButtonEvents(view, "toggleVote", ".action-vote")
 
     @setNextResponseContent = (content) ->
         $.ajax.andCallFake(

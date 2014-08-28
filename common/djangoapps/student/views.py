@@ -629,6 +629,8 @@ def change_enrollment(request, auto_register=False):
     try:
         course_id = SlashSeparatedCourseKey.from_deprecated_string(request.POST.get("course_id"))
     except InvalidKeyError:
+        log.warning("User {0} tried to change enrollment with invalid course id: {1}"
+                    .format(user.username, request.POST.get("course_id")))
         return HttpResponseBadRequest(_("Invalid course id"))
 
     if not user.is_authenticated():
